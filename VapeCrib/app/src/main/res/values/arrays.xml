@@ -1,0 +1,10 @@
+<resources>
+    <string-array name="time_period_options">
+        <item>7 Days</item>
+        <item>30 Days</item>
+        <item>3 Mo</item>
+        <item>6 Mo</item>
+        <item>1 Year</item>
+        <item>All Time</item>
+    </string-array>
+</resources>
