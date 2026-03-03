@@ -1,22 +1,238 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    android:id="@+id/swipeRefreshLayout"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.settings.SettingsFragment">
 
-    <TextView
-        android:id="@+id/text_settings"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:textAlignment="center"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:layout_height="match_parent"
+        android:background="@color/primary_dark">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Title -->
+            <TextView
+                android:id="@+id/text_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Dashboard Access Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dashboard"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="8dp" />
+
+            <Button
+                android:id="@+id/btn_web_dashboard"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Open Web Dashboard"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <!-- Data Management Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Data Management"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="24dp" />
+
+            <Button
+                android:id="@+id/btn_reload_csv"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Reload Data from CSV"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <!-- Sales Data Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sales Data"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="24dp" />
+
+            <Button
+                android:id="@+id/btn_export_sales"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Export Sales CSV"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <Button
+                android:id="@+id/btn_import_sales"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Import Sales CSV"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="8dp" />
+
+            <!-- Inventory Data Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Inventory Data"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="24dp" />
+
+            <Button
+                android:id="@+id/btn_export_inventory"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Export Inventory CSV"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <Button
+                android:id="@+id/btn_import_inventory"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Import Inventory CSV"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="8dp" />
+
+            <!-- About Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="About"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="24dp" />
+
+            <Button
+                android:id="@+id/btn_about"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="About VapeCrib"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <!-- Legal Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Legal &amp; Privacy"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="24dp" />
+
+            <Button
+                android:id="@+id/btn_terms"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Terms &amp; Conditions"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <Button
+                android:id="@+id/btn_privacy"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Privacy Policy"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="8dp" />
+
+            <!-- Support Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Support"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/secondary_text"
+                android:layout_marginTop="24dp" />
+
+            <Button
+                android:id="@+id/btn_help"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Help &amp; FAQ"
+                android:textColor="@android:color/white"
+                android:backgroundTint="@color/purple_500"
+                android:layout_marginTop="12dp" />
+
+            <!-- App Info -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginTop="24dp"
+                android:background="@color/primary">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="App Information"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white" />
+
+                <TextView
+                    android:id="@+id/tv_app_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Version: 1.0.0"
+                    android:textSize="12sp"
+                    android:textColor="@color/secondary_text"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    android:id="@+id/tv_build_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Build Date: March 4, 2026"
+                    android:textSize="12sp"
+                    android:textColor="@color/secondary_text"
+                    android:layout_marginTop="4dp" />
+
+            </LinearLayout>
+
+            <!-- Bottom Spacing -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
