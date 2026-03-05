@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -49,6 +50,8 @@ public class ReportsFragment extends Fragment {
                 v -> binding.tvTotalRevenue.setText("Revenue: " + v));
         reportsViewModel.getTotalProducts().observe(getViewLifecycleOwner(),
                 v -> binding.tvTotalProducts.setText("Products Sold: " + v));
+        reportsViewModel.getApiError().observe(getViewLifecycleOwner(),
+                msg -> { if (msg != null) Toast.makeText(getContext(), msg, Toast.LENGTH_SHORT).show(); });
 
         // Time Period Dropdown — preset options only, Start/End serve as custom range
         String[] timePeriods = {"All Time", "Last 30 Days", "Last 90 Days",
@@ -98,16 +101,27 @@ public class ReportsFragment extends Fragment {
     }
 
     private void updateDateDisplay() {
+        if (binding == null) return;
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        binding.etStartDate.setText(selectedStartDate.format(fmt));
-        binding.etEndDate.setText(selectedEndDate.format(fmt));
+        binding.etStartDate.setText(selectedStartDate != null ? selectedStartDate.format(fmt) : "");
+        binding.etEndDate.setText(selectedEndDate   != null ? selectedEndDate.format(fmt)   : "");
     }
 
     private void showDatePickerDialog(boolean isStartDate) {
+        if (!isAdded() || getContext() == null) return;
+        // Seed the picker on the already-chosen date if available, otherwise today
+        LocalDate seed = isStartDate
+                ? (selectedStartDate != null ? selectedStartDate : LocalDate.now())
+                : (selectedEndDate   != null ? selectedEndDate   : LocalDate.now());
         Calendar cal = Calendar.getInstance();
+        cal.set(seed.getYear(), seed.getMonthValue() - 1, seed.getDayOfMonth());
         new DatePickerDialog(getContext(),
                 (view, year, month, day) -> {
+                    if (binding == null) return;   // fragment already destroyed
                     LocalDate picked = LocalDate.of(year, month + 1, day);
+                    // Clamp to data range so the filter always yields results
+                    picked = picked.isBefore(CSV_MIN_DATE) ? CSV_MIN_DATE
+                           : picked.isAfter(CSV_MAX_DATE)  ? CSV_MAX_DATE : picked;
                     if (isStartDate) selectedStartDate = picked;
                     else             selectedEndDate   = picked;
                     binding.actvTimePeriod.setText("", false);
@@ -122,12 +136,15 @@ public class ReportsFragment extends Fragment {
     private void applyFilter() {
         if (selectedStartDate == null || selectedEndDate == null) return;
         if (selectedEndDate.isBefore(selectedStartDate)) {
-            LocalDate tmp  = selectedStartDate;
+            LocalDate tmp     = selectedStartDate;
             selectedStartDate = selectedEndDate;
             selectedEndDate   = tmp;
             updateDateDisplay();
         }
-        reportsViewModel.filterByDateRange(selectedStartDate, selectedEndDate);
+        // Ensure the range is always within the data-set boundaries
+        LocalDate clampedStart = selectedStartDate.isBefore(CSV_MIN_DATE) ? CSV_MIN_DATE : selectedStartDate;
+        LocalDate clampedEnd   = selectedEndDate.isAfter(CSV_MAX_DATE)    ? CSV_MAX_DATE : selectedEndDate;
+        reportsViewModel.filterByDateRange(clampedStart, clampedEnd);
     }
 
     @Override

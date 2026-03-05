@@ -115,6 +115,7 @@
         </androidx.cardview.widget.CardView>
 
         <GridLayout
+            android:id="@+id/cardKpiSummary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:columnCount="2"
@@ -321,6 +322,7 @@
 
         <!-- Restock Alerts Card -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/cardAlerts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"

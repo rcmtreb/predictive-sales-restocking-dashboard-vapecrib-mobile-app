@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cyan mist orb — placed bottom-left for depth effect -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="50%p"
+        android:startColor="#8800E5FF"
+        android:endColor="#0000E5FF" />
+</shape>

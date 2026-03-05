@@ -1,20 +1,19 @@
 package com.example.vapecrib.ui.settings;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.vapecrib.R;
@@ -23,111 +22,159 @@ import com.example.vapecrib.databinding.FragmentSettingsBinding;
 
 public class SettingsFragment extends Fragment {
 
+    public static final String PREFS_NAME        = "vapecrib_settings";
+    public static final String KEY_SHOW_ACTUAL   = "show_actual_line";
+    public static final String KEY_SHOW_FORECAST = "show_forecast_line";
+    public static final String KEY_CHART_ANIM    = "chart_animation";
+    public static final String KEY_SHOW_KPI      = "show_kpi_cards";
+    public static final String KEY_SHOW_ALERTS   = "show_alert_badges";
+    public static final String KEY_LOW_STOCK_N   = "low_stock_notif";
+    public static final String KEY_EXPIRY_N      = "expiry_notif";
+
     private SettingsViewModel settingsViewModel;
     private FragmentSettingsBinding binding;
+    private SharedPreferences prefs;
+
     private static final int PICK_CSV_REQUEST = 1001;
     private String importType = ""; // "sales" or "inventory"
 
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         settingsViewModel = new ViewModelProvider(this).get(SettingsViewModel.class);
         binding = FragmentSettingsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        final TextView textView = binding.textSettings;
-        settingsViewModel.getText().observe(getViewLifecycleOwner(), new Observer<String>() {
-            @Override
-            public void onChanged(@Nullable String s) {
-                textView.setText(s);
-            }
-        });
+        prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
+        // Remove the stale "This is settings fragment" observer — title is static in XML
+        settingsViewModel.getText().observe(getViewLifecycleOwner(), s -> { /* no-op */ });
+
+        loadSwitchStates();
+        setupSwitchListeners();
         setupCSVButtons();
         setupNavigationButtons();
 
-        // Pull-to-refresh
+        // Pull-to-refresh — reload CSV data
         binding.swipeRefreshLayout.setOnRefreshListener(() -> {
             com.example.vapecrib.data.db.AppDatabase.reloadFromCSV(requireContext());
             binding.swipeRefreshLayout.setRefreshing(false);
+            Toast.makeText(requireContext(), "Data reloaded from CSV", Toast.LENGTH_SHORT).show();
         });
 
         return root;
     }
 
+    // ── Switches ────────────────────────────────────────────────────────────
+
+    private void loadSwitchStates() {
+        binding.switchShowActual.setChecked(prefs.getBoolean(KEY_SHOW_ACTUAL,   true));
+        binding.switchShowForecast.setChecked(prefs.getBoolean(KEY_SHOW_FORECAST, true));
+        binding.switchChartAnimation.setChecked(prefs.getBoolean(KEY_CHART_ANIM,  true));
+        binding.switchShowKpi.setChecked(prefs.getBoolean(KEY_SHOW_KPI,          true));
+        binding.switchShowAlerts.setChecked(prefs.getBoolean(KEY_SHOW_ALERTS,    true));
+        binding.switchLowStockNotif.setChecked(prefs.getBoolean(KEY_LOW_STOCK_N, true));
+        binding.switchExpiryNotif.setChecked(prefs.getBoolean(KEY_EXPIRY_N,      true));
+    }
+
+    private void setupSwitchListeners() {
+        binding.switchShowActual.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_SHOW_ACTUAL, checked).apply();
+            Toast.makeText(requireContext(),
+                "Actual sales line " + (checked ? "shown" : "hidden"), Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchShowForecast.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_SHOW_FORECAST, checked).apply();
+            Toast.makeText(requireContext(),
+                "Forecast line " + (checked ? "shown" : "hidden"), Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchChartAnimation.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_CHART_ANIM, checked).apply();
+            Toast.makeText(requireContext(),
+                "Chart animation " + (checked ? "enabled" : "disabled"), Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchShowKpi.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_SHOW_KPI, checked).apply();
+            Toast.makeText(requireContext(),
+                "KPI cards " + (checked ? "visible" : "hidden"), Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchShowAlerts.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_SHOW_ALERTS, checked).apply();
+            Toast.makeText(requireContext(),
+                "Alert badges " + (checked ? "visible" : "hidden"), Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchLowStockNotif.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_LOW_STOCK_N, checked).apply();
+            Toast.makeText(requireContext(),
+                "Low-stock notifications " + (checked ? "on" : "off"), Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchExpiryNotif.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.edit().putBoolean(KEY_EXPIRY_N, checked).apply();
+            Toast.makeText(requireContext(),
+                "Expiry alerts " + (checked ? "on" : "off"), Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    // ── Navigation buttons ───────────────────────────────────────────────────
+
     private void setupNavigationButtons() {
-        // Web Dashboard
         binding.btnWebDashboard.setOnClickListener(v -> openWebDashboard());
-
-        // About
         binding.btnAbout.setOnClickListener(v -> showAboutDialog());
-
-        // Terms & Conditions
         binding.btnTerms.setOnClickListener(v -> openWebPage("https://vapecrib.com/terms"));
-
-        // Privacy Policy
         binding.btnPrivacy.setOnClickListener(v -> openWebPage("https://vapecrib.com/privacy"));
-
-        // Help & FAQ
         binding.btnHelp.setOnClickListener(v -> openWebPage("https://vapecrib.com/help"));
     }
 
     private void openWebDashboard() {
-        // Point to your web-based dashboard
-        String webDashboardUrl = "https://vapecrib.onrender.com";
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse(webDashboardUrl));
-        try {
-            startActivity(intent);
-        } catch (Exception e) {
-            Toast.makeText(requireContext(), "Unable to open web dashboard. Please check your internet connection.", Toast.LENGTH_LONG).show();
-        }
+        openWebPage("https://vapecrib.onrender.com");
     }
 
     private void openWebPage(String url) {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse(url));
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         try {
             startActivity(intent);
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Unable to open page. Please check your internet connection.", Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(),
+                "Unable to open page. Check your internet connection.", Toast.LENGTH_LONG).show();
         }
     }
 
     private void showAboutDialog() {
         new android.app.AlertDialog.Builder(requireContext())
             .setTitle("About VapeCrib")
-            .setMessage("VapeCrib Sales & Restocking Dashboard\n\n" +
-                "Version: 1.0.0\n\n" +
-                "A comprehensive mobile application for managing sales forecasts, " +
-                "inventory levels, and business intelligence for vape retailers.\n\n" +
-                "© 2026 VapeCrib. All rights reserved.")
-            .setPositiveButton("Close", (dialog, which) -> dialog.dismiss())
-            .setNeutralButton("Visit Website", (dialog, which) -> 
-                openWebPage("https://vapecrib.com"))
+            .setMessage("VapeCrib Sales & Restocking Dashboard\n\n"
+                + "Version: 1.0.0\n\n"
+                + "A comprehensive mobile application for managing sales forecasts, "
+                + "inventory levels, and business intelligence for vape retailers.\n\n"
+                + "© 2026 VapeCrib. All rights reserved.")
+            .setPositiveButton("Close", (d, w) -> d.dismiss())
+            .setNeutralButton("Visit Website", (d, w) -> openWebPage("https://vapecrib.com"))
             .show();
     }
 
+    // ── CSV buttons ──────────────────────────────────────────────────────────
+
     @SuppressLint("NewApi")
     private void setupCSVButtons() {
-        // Reload from CSV button
         binding.btnReloadCsv.setOnClickListener(v -> {
-            Toast.makeText(requireContext(), "Reloading data from CSV...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Reloading data from CSV…", Toast.LENGTH_SHORT).show();
             com.example.vapecrib.data.db.AppDatabase.reloadFromCSV(requireContext());
             Toast.makeText(requireContext(), "Data refreshed!", Toast.LENGTH_SHORT).show();
         });
 
-        // Export Sales CSV
         binding.btnExportSales.setOnClickListener(v -> exportSalesCSV());
-
-        // Export Inventory CSV
         binding.btnExportInventory.setOnClickListener(v -> exportInventoryCSV());
 
-        // Import Sales CSV
         binding.btnImportSales.setOnClickListener(v -> {
             importType = "sales";
             pickCSVFile();
         });
-
-        // Import Inventory CSV
         binding.btnImportInventory.setOnClickListener(v -> {
             importType = "inventory";
             pickCSVFile();
@@ -135,39 +182,29 @@ public class SettingsFragment extends Fragment {
     }
 
     private void exportSalesCSV() {
-        Thread thread = new Thread(() -> {
+        new Thread(() -> {
             try {
-                String filePath = CSVExporter.exportSalesCSV(requireContext());
+                String path = CSVExporter.exportSalesCSV(requireContext());
                 requireActivity().runOnUiThread(() ->
-                    Toast.makeText(requireContext(), 
-                        "Sales data exported to:\n" + filePath, 
-                        Toast.LENGTH_LONG).show());
+                    Toast.makeText(requireContext(), "Sales exported to:\n" + path, Toast.LENGTH_LONG).show());
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() ->
-                    Toast.makeText(requireContext(), 
-                        "Export failed: " + e.getMessage(), 
-                        Toast.LENGTH_LONG).show());
+                    Toast.makeText(requireContext(), "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
-        });
-        thread.start();
+        }).start();
     }
 
     private void exportInventoryCSV() {
-        Thread thread = new Thread(() -> {
+        new Thread(() -> {
             try {
-                String filePath = CSVExporter.exportInventoryCSV(requireContext());
+                String path = CSVExporter.exportInventoryCSV(requireContext());
                 requireActivity().runOnUiThread(() ->
-                    Toast.makeText(requireContext(), 
-                        "Inventory data exported to:\n" + filePath, 
-                        Toast.LENGTH_LONG).show());
+                    Toast.makeText(requireContext(), "Inventory exported to:\n" + path, Toast.LENGTH_LONG).show());
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() ->
-                    Toast.makeText(requireContext(), 
-                        "Export failed: " + e.getMessage(), 
-                        Toast.LENGTH_LONG).show());
+                    Toast.makeText(requireContext(), "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
-        });
-        thread.start();
+        }).start();
     }
 
     private void pickCSVFile() {
@@ -179,65 +216,52 @@ public class SettingsFragment extends Fragment {
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_CSV_REQUEST && data != null) {
             Uri uri = data.getData();
-            if (uri != null) {
-                importCSVFromUri(uri);
-            }
+            if (uri != null) importCSVFromUri(uri);
         }
     }
 
     private void importCSVFromUri(Uri uri) {
-        Thread thread = new Thread(() -> {
+        new Thread(() -> {
             try {
                 String filePath = getRealPathFromURI(uri);
                 if (filePath == null) {
                     requireActivity().runOnUiThread(() ->
-                        Toast.makeText(requireContext(), 
-                            "Could not access file", 
-                            Toast.LENGTH_SHORT).show());
+                        Toast.makeText(requireContext(), "Could not access file", Toast.LENGTH_SHORT).show());
                     return;
                 }
-
                 int count = 0;
                 if ("sales".equals(importType)) {
                     count = CSVExporter.importSalesCSV(requireContext(), new java.io.File(filePath));
                 } else if ("inventory".equals(importType)) {
                     count = CSVExporter.importInventoryCSV(requireContext(), new java.io.File(filePath));
                 }
-
                 final int finalCount = count;
                 requireActivity().runOnUiThread(() ->
-                    Toast.makeText(requireContext(), 
-                        "Imported " + finalCount + " rows successfully", 
-                        Toast.LENGTH_LONG).show());
+                    Toast.makeText(requireContext(),
+                        "Imported " + finalCount + " rows successfully", Toast.LENGTH_LONG).show());
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() ->
-                    Toast.makeText(requireContext(), 
-                        "Import failed: " + e.getMessage(), 
-                        Toast.LENGTH_LONG).show());
+                    Toast.makeText(requireContext(), "Import failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
-        });
-        thread.start();
+        }).start();
     }
 
     private String getRealPathFromURI(Uri uri) {
         try {
-            java.io.InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
-            if (inputStream == null) return null;
-
-            java.io.File tempFile = new java.io.File(requireContext().getCacheDir(), "temp_import.csv");
-            try (java.io.FileOutputStream outputStream = new java.io.FileOutputStream(tempFile);
-                 java.io.BufferedInputStream bis = new java.io.BufferedInputStream(inputStream)) {
-                byte[] buffer = new byte[1024];
-                int read;
-                while ((read = bis.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, read);
-                }
+            java.io.InputStream is = requireContext().getContentResolver().openInputStream(uri);
+            if (is == null) return null;
+            java.io.File temp = new java.io.File(requireContext().getCacheDir(), "temp_import.csv");
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(temp);
+                 java.io.BufferedInputStream bis = new java.io.BufferedInputStream(is)) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = bis.read(buf)) != -1) fos.write(buf, 0, n);
             }
-            return tempFile.getAbsolutePath();
+            return temp.getAbsolutePath();
         } catch (Exception e) {
             return null;
         }
