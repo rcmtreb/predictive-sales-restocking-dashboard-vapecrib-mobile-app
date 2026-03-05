@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_login_smoke"
+    android:fillViewport="true"
+    tools:context=".LoginActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="640dp">
+
+        <!-- ── Smoke / mist orb — top right (purple) ── -->
+        <View
+            android:id="@+id/orb_top"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:alpha="0.38"
+            android:background="@drawable/smoke_orb_purple"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginEnd="-80dp"
+            android:layout_marginTop="-80dp" />
+
+        <!-- ── Smoke / mist orb — bottom left (cyan) ── -->
+        <View
+            android:id="@+id/orb_bottom"
+            android:layout_width="260dp"
+            android:layout_height="260dp"
+            android:alpha="0.28"
+            android:background="@drawable/smoke_orb_cyan"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginStart="-70dp"
+            android:layout_marginBottom="-70dp" />
+
+        <!-- ── App icon (frosted circle) ── -->
+        <ImageView
+            android:id="@+id/logo_image"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginTop="72dp"
+            android:background="@drawable/icon_bg_circle"
+            android:padding="10dp"
+            android:src="@mipmap/ic_launcher"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- ── Brand name ── -->
+        <TextView
+            android:id="@+id/tv_brand_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:fontFamily="sans-serif-condensed"
+            android:letterSpacing="0.06"
+            android:text="VapeCrib"
+            android:textColor="#FFFFFF"
+            android:textSize="38sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/logo_image" />
+
+        <!-- ── Tagline ── -->
+        <TextView
+            android:id="@+id/tv_tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:letterSpacing="0.12"
+            android:text="Track. Predict. Dominate."
+            android:textAllCaps="false"
+            android:textColor="#99AACCFF"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tv_brand_name" />
+
+        <!-- ── Login card (frosted glass style) ── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_view"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="28dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginEnd="28dp"
+            app:cardBackgroundColor="#D01C1C2E"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#33FFFFFF"
+            app:strokeWidth="1dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tv_tagline">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="28dp">
+
+                <!-- Card header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome back"
+                    android:textColor="#FFFFFF"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign in to your dashboard"
+                    android:textColor="#77AACCFF"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="28dp" />
+
+                <!-- Username field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:hint="Username"
+                    app:boxStrokeColor="#6600CFFF"
+                    app:boxStrokeWidth="1.5dp"
+                    app:hintTextColor="#99AACCFF"
+                    app:startIconDrawable="@drawable/ic_baseline_person_outline_24"
+                    app:startIconTint="#7700CFFF">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:textColor="#FFFFFF"
+                        android:textColorHint="#55FFFFFF" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password field -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="28dp"
+                    android:hint="Password"
+                    app:boxStrokeColor="#6600CFFF"
+                    app:boxStrokeWidth="1.5dp"
+                    app:hintTextColor="#99AACCFF"
+                    app:passwordToggleEnabled="true"
+                    app:startIconDrawable="@drawable/ic_lock_outline"
+                    app:startIconTint="#7700CFFF">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:textColor="#FFFFFF"
+                        android:textColorHint="#55FFFFFF" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Sign in button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginbtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:letterSpacing="0.1"
+                    android:text="SIGN IN"
+                    android:textColor="#0A0A14"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#00CFFF"
+                    app:cornerRadius="12dp"
+                    app:rippleColor="#3300CFFF" />
+
+                <!-- Progress indicator -->
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="16dp"
+                    android:indeterminateTint="#00CFFF"
+                    android:visibility="gone" />
+
+                <!-- Error text -->
+                <TextView
+                    android:id="@+id/tv_login_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:textColor="#FF5252"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Version label at bottom ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:letterSpacing="0.05"
+            android:text="VapeCrib v1.0"
+            android:textColor="#33FFFFFF"
+            android:textSize="11sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/card_view"
+            app:layout_constraintVertical_bias="1.0" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

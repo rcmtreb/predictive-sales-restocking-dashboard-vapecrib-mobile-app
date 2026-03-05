@@ -1,0 +1,90 @@
+﻿productName,currentStock,minStockLevel,maxStockLevel,category,stockLevel,isExpiringSoon
+Vape Pen V1,3,50,100,Vaping,CRITICAL,true
+E-Liquid Berry,10,50,100,Vaping,CRITICAL,false
+Coil Pack A,1,50,100,Vaping,CRITICAL,true
+Battery 18650,6,50,100,Vaping,CRITICAL,true
+Charger USB-C,10,50,100,Vaping,CRITICAL,false
+Tank Glass,9,50,100,Vaping,CRITICAL,false
+Drip Tip Metal,10,50,100,Vaping,CRITICAL,false
+Cotton Organic,3,50,100,Vaping,CRITICAL,false
+Wire Kanthal,1,50,100,Vaping,CRITICAL,false
+Tool Kit,1,50,100,Vaping,CRITICAL,true
+Case Leather,1,50,100,Vaping,CRITICAL,true
+Mod Box V2,8,50,100,Vaping,CRITICAL,true
+Atomizer RDA,10,50,100,Vaping,CRITICAL,false
+E-Liquid Mint,8,50,100,Vaping,CRITICAL,true
+Coil Pack B,4,50,100,Vaping,CRITICAL,false
+Battery 21700,7,50,100,Vaping,CRITICAL,false
+Charger Dual,1,50,100,Vaping,CRITICAL,false
+Tank Plastic,2,50,100,Vaping,CRITICAL,true
+Drip Tip Ceramic,10,50,100,Vaping,CRITICAL,false
+Cotton Premium,10,50,100,Vaping,CRITICAL,true
+Wire Stainless,2,50,100,Vaping,CRITICAL,false
+Tool Screwdriver,7,50,100,Vaping,CRITICAL,true
+Case Silicone,5,50,100,Vaping,CRITICAL,false
+Mod Tube,8,50,100,Vaping,CRITICAL,true
+Atomizer RTA,2,50,100,Vaping,CRITICAL,false
+E-Liquid Vanilla,8,50,100,Vaping,CRITICAL,false
+Coil Pack C,2,50,100,Vaping,CRITICAL,true
+Battery Wrap,4,50,100,Vaping,CRITICAL,false
+Charger Car,6,50,100,Vaping,CRITICAL,true
+Tank Hybrid,2,50,100,Vaping,CRITICAL,false
+Drip Tip Resin,1,50,100,Vaping,CRITICAL,false
+Cotton Muji,2,50,100,Vaping,CRITICAL,false
+Wire Nichrome,5,50,100,Vaping,CRITICAL,false
+Tool Tweezers,4,50,100,Vaping,CRITICAL,false
+Case Hard,8,50,100,Vaping,CRITICAL,false
+Mod Squonk,7,50,100,Vaping,CRITICAL,false
+Atomizer RDTA,6,50,100,Vaping,CRITICAL,true
+E-Liquid Tobacco,6,50,100,Vaping,CRITICAL,false
+Coil Mesh,4,50,100,Vaping,CRITICAL,false
+Battery Case,8,50,100,Vaping,CRITICAL,true
+Ohm Reader,7,50,100,Vaping,CRITICAL,false
+Premium Juice A,37,50,100,Premium,HIGH,true
+Premium Juice B,17,50,100,Premium,HIGH,false
+Premium Juice C,38,50,100,Premium,HIGH,false
+Starter Kit Pro,39,50,100,Premium,HIGH,false
+Advanced Mod X,11,50,100,Premium,HIGH,false
+Tank Premium,14,50,100,Premium,HIGH,true
+Coil Premium,15,50,100,Premium,HIGH,false
+Battery Premium,33,50,100,Premium,HIGH,false
+Charger Fast,33,50,100,Premium,HIGH,false
+Tool Premium,25,50,100,Premium,HIGH,false
+Case Premium,19,50,100,Premium,HIGH,false
+Cotton Premium Plus,12,50,100,Premium,HIGH,false
+Wire Premium,31,50,100,Premium,HIGH,false
+Atomizer Premium,15,50,100,Premium,HIGH,false
+Drip Premium,22,50,100,Premium,HIGH,false
+Mod Elite,36,50,100,Premium,HIGH,false
+Kit Beginner,24,50,100,Premium,HIGH,false
+Juice Collection,38,50,100,Premium,HIGH,false
+Battery Set,26,50,100,Premium,HIGH,false
+Charger Station,14,50,100,Premium,HIGH,false
+Tool Set Pro,26,50,100,Premium,HIGH,false
+Cotton Bundle,32,50,100,Premium,HIGH,false
+Wire Set,34,50,100,Premium,HIGH,false
+Standard Kit A,48,50,100,Standard,MEDIUM,false
+Standard Kit B,45,50,100,Standard,MEDIUM,false
+Standard Juice,48,50,100,Standard,MEDIUM,false
+Basic Mod,52,50,100,Standard,MEDIUM,true
+Regular Tank,53,50,100,Standard,MEDIUM,false
+Standard Coil,53,50,100,Standard,MEDIUM,false
+Basic Battery,46,50,100,Standard,MEDIUM,true
+Simple Charger,52,50,100,Standard,MEDIUM,false
+Basic Tool,60,50,100,Standard,MEDIUM,false
+Standard Case,55,50,100,Standard,MEDIUM,false
+Regular Cotton,45,50,100,Standard,MEDIUM,false
+Basic Wire,42,50,100,Standard,MEDIUM,false
+Standard Atomizer,44,50,100,Standard,MEDIUM,false
+Regular Drip,49,50,100,Standard,MEDIUM,false
+Basic Mod V2,60,50,100,Standard,MEDIUM,false
+Kit Standard,49,50,100,Standard,MEDIUM,false
+Juice Regular,42,50,100,Standard,MEDIUM,false
+Battery Standard,59,50,100,Standard,MEDIUM,false
+Budget Kit,78,50,100,Budget,LOW,false
+Economy Juice,79,50,100,Budget,LOW,false
+Basic Starter,78,50,100,Budget,LOW,false
+Simple Mod,75,50,100,Budget,LOW,false
+Entry Tank,80,50,100,Budget,LOW,false
+Starter Coil,76,50,100,Budget,LOW,false
+Budget Battery,73,50,100,Budget,LOW,false
