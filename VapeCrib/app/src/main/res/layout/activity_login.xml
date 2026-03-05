@@ -141,7 +141,8 @@
                         android:layout_height="wrap_content"
                         android:inputType="text"
                         android:textColor="#FFFFFF"
-                        android:textColorHint="#55FFFFFF" />
+                        android:textColorHint="#55FFFFFF"
+                        android:textCursorDrawable="@null" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Password field -->
@@ -164,7 +165,8 @@
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
                         android:textColor="#FFFFFF"
-                        android:textColorHint="#55FFFFFF" />
+                        android:textColorHint="#55FFFFFF"
+                        android:textCursorDrawable="@null" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Sign in button -->

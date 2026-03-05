@@ -48,7 +48,7 @@ public class ReportsViewModel extends AndroidViewModel {
     public ReportsViewModel(Application application) {
         super(application);
         allSalesData     = new ArrayList<>();
-        currentStartDate = LocalDate.of(2022, 1, 1);
+        currentStartDate = LocalDate.now().minusMonths(3);  // match web default (last 3 months)
         currentEndDate   = LocalDate.now();
         // Show loading placeholders while API fetches
         criticalCount .setValue("Critical: ...");

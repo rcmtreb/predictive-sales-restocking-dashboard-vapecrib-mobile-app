@@ -2,6 +2,8 @@ package com.example.vapecrib;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.Toast;
 
@@ -13,6 +15,7 @@ import com.example.vapecrib.network.LoginResponse;
 import com.example.vapecrib.network.RetrofitClient;
 import com.example.vapecrib.network.TokenManager;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -21,6 +24,9 @@ public class LoginActivity extends AppCompatActivity {
 
     private ActivityLoginBinding binding;
     private TokenManager tokenManager;
+    // Handler used to show a "server is waking up" hint after 8s of waiting
+    private final Handler coldStartHandler = new Handler(Looper.getMainLooper());
+    private Runnable coldStartRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +43,34 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         binding.loginbtn.setOnClickListener(v -> attemptLogin());
+
+        // Fire a lightweight ping to wake up the Render dyno while the user
+        // types their credentials — keeps perceived login latency low.
+        // Show a subtle hint so users know the server is being contacted.
+        showError("Connecting to server\u2026");
+        pingServer();
+    }
+
+    /** Sends a no-auth GET /api/mobile/ping to warm up the server. */
+    private void pingServer() {
+        RetrofitClient.getInstance(this)
+                .getApi()
+                .ping()
+                .enqueue(new Callback<ResponseBody>() {
+                    @Override
+                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                        runOnUiThread(() -> {
+                            if (binding != null) binding.tvLoginError.setVisibility(View.GONE);
+                        });
+                    }
+                    @Override
+                    public void onFailure(Call<ResponseBody> call, Throwable t) {
+                        // Server still waking — login attempt (60 s timeout) will handle it
+                        runOnUiThread(() -> {
+                            if (binding != null) binding.tvLoginError.setVisibility(View.GONE);
+                        });
+                    }
+                });
     }
 
     private void attemptLogin() {
@@ -51,6 +85,17 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         setLoading(true);
+
+        // If still waiting after 8 s, hint that Render may be cold-starting.
+        // The handler is removed immediately if login succeeds/fails before then.
+        coldStartRunnable = () -> {
+            if (binding != null) {
+                binding.loginbtn.setText("Server starting up\u2026");
+                binding.tvLoginError.setText("Server is waking up — this can take up to 30 s.");
+                binding.tvLoginError.setVisibility(View.VISIBLE);
+            }
+        };
+        coldStartHandler.postDelayed(coldStartRunnable, 8000);
 
         RetrofitClient.getInstance(this)
                 .getApi()
@@ -90,8 +135,10 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    private void setLoading(boolean loading) {
-        binding.loginbtn.setEnabled(!loading);
+    private void setLoading(boolean loading) {        if (!loading && coldStartRunnable != null) {
+            coldStartHandler.removeCallbacks(coldStartRunnable);
+            coldStartRunnable = null;
+        }        binding.loginbtn.setEnabled(!loading);
         binding.loginbtn.setText(loading ? "Signing in…" : "SIGN IN");
         binding.progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
         binding.tvLoginError.setVisibility(View.GONE);

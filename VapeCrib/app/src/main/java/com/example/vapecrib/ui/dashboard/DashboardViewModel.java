@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.example.vapecrib.model.SalesData;
 import com.example.vapecrib.network.DashboardResponse;
+import com.example.vapecrib.network.ForecastAccuracyResponse;
 import com.example.vapecrib.network.ForecastApiRecord;
 import com.example.vapecrib.network.PagedForecastResponse;
 import com.example.vapecrib.network.RetrofitClient;
@@ -23,6 +24,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,8 +59,8 @@ public class DashboardViewModel extends AndroidViewModel {
     private float cachedForecastAccuracy = -1f;
     private float cachedInventoryValue   = -1f;
     private boolean dataLoaded = false;
-    // Default range: last 3 months (matches the website default)
-    private LocalDate currentStartDate = LocalDate.now().minusMonths(3);
+    // Default range: Last 7 Days — shows the most recent activity on first open.
+    private LocalDate currentStartDate = LocalDate.now().minusDays(6);
     private LocalDate currentEndDate   = LocalDate.now();
 
     public DashboardViewModel(Application application) {
@@ -158,8 +160,6 @@ public class DashboardViewModel extends AndroidViewModel {
      */
     private Map<LocalDate, Float> fetchForecastMap(String fromDate, String toDate) {
         Map<LocalDate, Float> result = new LinkedHashMap<>();
-        // accSum[0]=sum of accuracy values, accSum[1]=count
-        float[] accSum = {0f, 0f};
         try {
             int page = 1;
             while (true) {
@@ -178,18 +178,11 @@ public class DashboardViewModel extends AndroidViewModel {
                     if (dateStr == null) continue;
                     LocalDate d = LocalDate.parse(dateStr);
                     result.merge(d, f.predictedQuantity, Float::sum);
-                    // Accumulate stored accuracy for averaging
-                    if (f.accuracy > 0) {
-                        accSum[0] += f.accuracy;
-                        accSum[1]++;
-                    }
                 }
                 if (page >= body.getPages() || body.getPages() == 0) break;
                 page++;
             }
         } catch (Exception ignored) { /* silent: forecast missing → 0f fallback */ }
-        // Store average accuracy from Flask — used instead of recalculating in computeAndPost()
-        if (accSum[1] > 0) cachedForecastAccuracy = accSum[0] / accSum[1];
         return result;
     }
 
@@ -270,6 +263,29 @@ public class DashboardViewModel extends AndroidViewModel {
             totalInventoryValue.postValue(String.format("P%,.0f", cachedInventoryValue));
             if (d.topProducts != null) topProducts.postValue(d.topProducts);
         } catch (Exception ignored) { /* network error — keep local values */ }
+
+        // Fetch MAPE-based forecast accuracy using the same method as the web dashboard.
+        // days_back is computed from the currently-selected date range so the accuracy
+        // value changes when the user picks a different period (7d / 30d / 3m etc.).
+        try {
+            int daysBack = (int) Math.max(1, ChronoUnit.DAYS.between(currentStartDate, currentEndDate));
+            Response<ForecastAccuracyResponse> accResp = RetrofitClient
+                    .getInstance(getApplication())
+                    .getApi()
+                    .getForecastAccuracy(daysBack)
+                    .execute();
+            if (accResp.isSuccessful() && accResp.body() != null
+                    && accResp.body().data != null) {
+                cachedForecastAccuracy = accResp.body().data.accuracy;
+                computeAndPost(); // refresh the displayed accuracy card
+            }
+        } catch (Exception ignored) { /* keep local estimate if server unreachable */ }
+    }
+
+    /** Clear the API error after it has been consumed by the UI to prevent re-showing
+     *  on screen rotation or fragment back-stack restoration. */
+    public void clearApiError() {
+        apiError.postValue(null);
     }
 
     private void buildSalesTrendChart(List<SalesData> data) {
@@ -331,13 +347,17 @@ public class DashboardViewModel extends AndroidViewModel {
     private void resetValues() {
         totalSalesProducts.postValue("0");
         totalSalesRevenue.postValue("P0.00");
-        totalInventoryValue.postValue("P0.00");
+        // Inventory value is the CURRENT stock value — not period-dependent.
+        // Preserve the cached value so switching to a period with no sales doesn't wipe it.
+        totalInventoryValue.postValue(
+            cachedInventoryValue >= 0 ? String.format("P%,.0f", cachedInventoryValue) : "Loading...");
         forecastAccuracy.postValue("0%");
-        activeAlerts.postValue("0");
-        expiringStocks.postValue("0");
-        criticalCount.postValue("Critical: 0");
-        highCount.postValue("High: 0");
-        mediumCount.postValue("Medium: 0");
+        // Also preserve alert counts if cached
+        activeAlerts.postValue(String.valueOf(cachedCritical > 0 ? cachedCritical : 0));
+        expiringStocks.postValue(String.valueOf(cachedExpiring));
+        criticalCount.postValue("Critical: " + cachedCritical);
+        highCount.postValue("Warning: " + cachedHigh);
+        mediumCount.postValue("Info: " + cachedMedium);
         salesTrendData.postValue(null);
         monthlyPerformanceData.postValue(null);
     }
@@ -346,6 +366,18 @@ public class DashboardViewModel extends AndroidViewModel {
     protected void onCleared() {
         super.onCleared();
         bgExecutor.shutdownNow();
+    }
+
+    /**
+     * Re-fetches data for the currently-selected date range.
+     * Called from DashboardFragment.onResume() so the dashboard always shows
+     * fresh data when the user navigates back to it without a full reload.
+     */
+    public void refresh() {
+        bgExecutor.execute(() -> {
+            fetchFromApi(currentStartDate, currentEndDate);
+            fetchDashboard();
+        });
     }
 
     public LiveData<String>   getTotalSalesProducts()      { return totalSalesProducts;      }

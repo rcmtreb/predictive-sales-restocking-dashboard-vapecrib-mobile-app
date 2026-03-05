@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Filter;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +39,8 @@ public class DashboardFragment extends Fragment {
     private FragmentDashboardBinding binding;
     private LocalDate selectedStartDate;
     private LocalDate selectedEndDate;
+    /** Skip the very first onResume — the ViewModel constructor already fetches on creation. */
+    private boolean skipFirstResume = true;
 
     @SuppressLint("NewApi")
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -46,8 +49,9 @@ public class DashboardFragment extends Fragment {
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        // Initialize dates — default "Last 3 Months" to match website and ViewModel
-        selectedStartDate = LocalDate.now().minusMonths(3);
+        // Initialize dates — Last 7 Days shows the most recent activity on first open.
+        // Matches the web's period=7d: filter_start = today - 6 days (7 days incl. today).
+        selectedStartDate = LocalDate.now().minusDays(6);
         selectedEndDate   = LocalDate.now();
 
         // Apply saved display preferences
@@ -77,11 +81,15 @@ public class DashboardFragment extends Fragment {
         // Stop the spinner once new chart data or an error arrives
         dashboardViewModel.getSalesTrendData().observe(getViewLifecycleOwner(), d -> swipeRefresh.setRefreshing(false));
 
-        // Show a brief toast when the API can't be reached (cached data is still shown)
+        // Show a brief toast when the API can't be reached (cached data is still shown).
+        // clearApiError() is called after display to prevent the sticky-LiveData problem
+        // where re-subscribing on navigation-back would re-fire an old error.
         dashboardViewModel.getApiError().observe(getViewLifecycleOwner(), err -> {
             swipeRefresh.setRefreshing(false);
-            if (err != null && !err.isEmpty() && isAdded())
+            if (err != null && !err.isEmpty() && isAdded()) {
                 Toast.makeText(requireContext(), err, Toast.LENGTH_LONG).show();
+                dashboardViewModel.clearApiError();
+            }
         });
         dashboardViewModel.getSalesTrendData().observe(getViewLifecycleOwner(), lineData -> {
             if (lineData != null) {
@@ -115,12 +123,31 @@ public class DashboardFragment extends Fragment {
             }
         });
 
-        // Time Period Dropdown
+        // Use a no-op filter so the dropdown always shows all options regardless of
+        // current text — without this, AutoCompleteTextView filters the list to show
+        // only the item matching the currently-set text (e.g. only "Last 3 Months").
         String[] timePeriods = {"All Time", "Last 7 Days", "Last 30 Days", "Last 3 Months", "Last 6 Months", "Last Year", "Custom"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_dropdown_item_1line, timePeriods);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_dropdown_item_1line, timePeriods) {
+            @Override
+            public android.widget.Filter getFilter() {
+                return new android.widget.Filter() {
+                    @Override
+                    protected FilterResults performFiltering(CharSequence constraint) {
+                        FilterResults r = new FilterResults();
+                        r.values = timePeriods;
+                        r.count  = timePeriods.length;
+                        return r;
+                    }
+                    @Override
+                    protected void publishResults(CharSequence constraint, FilterResults results) {
+                        notifyDataSetChanged();
+                    }
+                };
+            }
+        };
         binding.actvTimePeriod.setAdapter(adapter);
-        // Pre-select "Last 3 Months" so the dropdown label matches the default data range
-        binding.actvTimePeriod.setText("Last 3 Months", false);
+        // Pre-select "Last 7 Days" so the dropdown label matches the default data range
+        binding.actvTimePeriod.setText("Last 7 Days", false);
         updateDateDisplay();
         binding.actvTimePeriod.setOnItemClickListener((parent, view, position, id) -> {
             handleTimePeriodSelection(position);
@@ -139,30 +166,32 @@ public class DashboardFragment extends Fragment {
 
     private void handleTimePeriodSelection(int position) {
         LocalDate today = LocalDate.now();
-        
+        // Date ranges match the web server exactly:
+        //   web period=Nd  uses  filter_start = today - timedelta(days=N-1)
+        //   so  "Last 30 Days" = today - 29 days  (30 days incl. today)
         switch (position) {
             case 0: // All Time
                 selectedStartDate = LocalDate.of(2022, 1, 1);
                 selectedEndDate = today;
                 break;
-            case 1: // Last 7 Days
-                selectedStartDate = today.minusDays(7);
+            case 1: // Last 7 Days  (= web 7d: today - 6 days)
+                selectedStartDate = today.minusDays(6);
                 selectedEndDate = today;
                 break;
-            case 2: // Last 30 Days
-                selectedStartDate = today.minusDays(30);
+            case 2: // Last 30 Days (= web 30d: today - 29 days)
+                selectedStartDate = today.minusDays(29);
                 selectedEndDate = today;
                 break;
-            case 3: // Last 3 Months
-                selectedStartDate = today.minusMonths(3);
+            case 3: // Last 3 Months (= web 3m: 90 days, today - 89 days)
+                selectedStartDate = today.minusDays(89);
                 selectedEndDate = today;
                 break;
-            case 4: // Last 6 Months
-                selectedStartDate = today.minusMonths(6);
+            case 4: // Last 6 Months (= web 6m: 180 days, today - 179 days)
+                selectedStartDate = today.minusDays(179);
                 selectedEndDate = today;
                 break;
-            case 5: // Last Year
-                selectedStartDate = today.minusYears(1);
+            case 5: // Last Year (= web 1y: 365 days, today - 364 days)
+                selectedStartDate = today.minusDays(364);
                 selectedEndDate = today;
                 break;
             case 6: // Custom
@@ -368,6 +397,21 @@ public class DashboardFragment extends Fragment {
             row.addView(tvStats);
             container.addView(row);
             rank++;
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (skipFirstResume) {
+            skipFirstResume = false;
+            return; // ViewModel constructor already kicked off the initial fetch
+        }
+        // Refresh data every time the user navigates back to the dashboard so it always
+        // shows the latest figures without requiring a manual swipe-to-refresh.
+        if (dashboardViewModel != null && binding != null) {
+            binding.swipeRefreshLayout.setRefreshing(true);
+            dashboardViewModel.refresh();
         }
     }
 

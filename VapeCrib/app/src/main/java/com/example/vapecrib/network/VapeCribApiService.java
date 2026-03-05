@@ -84,5 +84,22 @@ public interface VapeCribApiService {
             @Query("page")       int     page,
             @Query("limit")      int     limit
     );
+
+    /**
+     * No-auth lightweight health check used to wake up the Render dyno
+     * before the user presses Sign In.
+     * Matches: GET /api/mobile/ping
+     */
+    @GET("ping")
+    Call<okhttp3.ResponseBody> ping();
+
+    /**
+     * MAPE-based forecast accuracy — same calculation method as the web dashboard.
+     * Matches: GET /api/mobile/forecast-accuracy?days_back=90
+     */
+    @GET("forecast-accuracy")
+    Call<ForecastAccuracyResponse> getForecastAccuracy(
+            @Query("days_back") int daysBack
+    );
 }
 
