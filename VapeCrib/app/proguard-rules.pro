@@ -29,6 +29,11 @@
 # ── MPAndroidChart ───────────────────────────────────────────────────────────
 -keep class com.github.mikephil.charting.** { *; }
 
+# ── UI layer (ViewModels, Fragments, Activities) ─────────────────────────────
+# ViewModels are aggressively devirtualized → inlined by R8.  Keep all public
+# methods explicitly so every getter/setter called from Fragments survives.
+-keep class com.example.vapecrib.ui.** { public *; }
+
 # ── Room database ────────────────────────────────────────────────────────────
 -keep class com.example.vapecrib.data.db.** { *; }
 

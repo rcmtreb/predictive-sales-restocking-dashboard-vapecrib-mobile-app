@@ -48,6 +48,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     AppDatabase.class,
                                     "vapecrib_db")
                             .addCallback(seedCallback)
+                            .fallbackToDestructiveMigration()
                             .build();
                     
                     // Check if database is empty and load CSV if needed
