@@ -7,5 +7,10 @@ public class LoginResponse {
     @SerializedName("access_token")
     private String accessToken;
 
-    public String getAccessToken() { return accessToken; }
+    /** Flask also returns a 30-day refresh token */
+    @SerializedName("refresh_token")
+    private String refreshToken;
+
+    public String getAccessToken()  { return accessToken;  }
+    public String getRefreshToken() { return refreshToken; }
 }

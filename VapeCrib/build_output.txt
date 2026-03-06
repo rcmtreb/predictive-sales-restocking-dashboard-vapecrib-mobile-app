@@ -1,0 +1,104 @@
+﻿> Task :app:clean
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs NO-SOURCE
+> Task :app:stripReleaseDebugSymbols NO-SOURCE
+> Task :app:extractReleaseNativeSymbolTables NO-SOURCE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:dataBindingMergeDependencyArtifactsRelease
+> Task :app:generateReleaseResValues
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseResources
+> Task :app:mergeReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:processReleaseNavigationResources
+> Task :app:parseReleaseLocalResources
+> Task :app:javaPreCompileRelease
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:compileReleaseNavigationResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:processReleaseManifestForPackage
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:dataBindingGenBaseClassesRelease
+> Task :app:processReleaseResources
+
+> Task :app:compileReleaseJavaWithJavac
+Java compiler version 21 has deprecated support for compiling with source/target version 8.
+Try one of the following options:
+    1. [Recommended] Use Java toolchain with a lower language version
+    2. Set a higher source/target version
+    3. Use a lower version of the JDK running the build (if you're not using Java toolchain)
+For more details on how to configure these settings, see https://developer.android.com/build/jdks.
+To suppress this warning, set android.javaCompile.suppressSourceTargetDeprecationWarning=true in gradle.properties.
+.\gradlew : warning: [options] source value 8 is obsolete and will be removed 
+in a future release
+At line:1 char:1
++ .\gradlew clean assembleRelease --no-configuration-cache 2>&1 | Out-F ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: [optio... future release 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: [options] target value 8 is obsolete and will be removed in a future 
+release
+warning: [options] To suppress warnings about obsolete options, use 
+-Xlint:-options.
+C:\Users\ASUS\Contacts\Documents\GitHub\predictive-sales-restocking-dashboard-v
+apecrib-mobile-app\VapeCrib\app\src\main\java\com\example\vapecrib\data\db\Sale
+sDataEntity.java:12: warning: There are multiple good constructors and Room 
+will pick the no-arg constructor. You can use the @Ignore annotation to 
+eliminate unwanted constructors.
+public class SalesDataEntity {
+       ^
+C:\Users\ASUS\Contacts\Documents\GitHub\predictive-sales-restocking-dashboard-v
+apecrib-mobile-app\VapeCrib\app\src\main\java\com\example\vapecrib\data\db\Inve
+ntoryItemEntity.java:11: warning: There are multiple good constructors and 
+Room will pick the no-arg constructor. You can use the @Ignore annotation to 
+eliminate unwanted constructors.
+public class InventoryItemEntity {
+       ^
+C:\Users\ASUS\Contacts\Documents\GitHub\predictive-sales-restocking-dashboard-v
+apecrib-mobile-app\VapeCrib\app\src\main\java\com\example\vapecrib\data\db\Sale
+sDataEntity.java:12: warning: There are multiple good constructors and Room 
+will pick the no-arg constructor. You can use the @Ignore annotation to 
+eliminate unwanted constructors.
+public class SalesDataEntity {
+       ^
+C:\Users\ASUS\Contacts\Documents\GitHub\predictive-sales-restocking-dashboard-v
+apecrib-mobile-app\VapeCrib\app\src\main\java\com\example\vapecrib\data\db\Inve
+ntoryItemEntity.java:11: warning: There are multiple good constructors and 
+Room will pick the no-arg constructor. You can use the @Ignore annotation to 
+eliminate unwanted constructors.
+public class InventoryItemEntity {
+       ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+7 warnings
+
+> Task :app:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processReleaseJavaRes
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:minifyReleaseWithR8
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease

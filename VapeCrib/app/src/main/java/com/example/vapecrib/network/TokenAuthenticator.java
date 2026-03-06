@@ -17,14 +17,17 @@ import okhttp3.Route;
  * OkHttp Authenticator — called automatically on 401 Unauthorized.
  *
  * Strategy:
- *   1. Use stored credentials to call POST /api/mobile/auth/login synchronously.
- *   2. If login succeeds → save new token, retry original request.
- *   3. If login fails    → return null (OkHttp will propagate the 401 to the caller).
+ *   1. Use the stored refresh_token to call POST /api/mobile/auth/refresh (silent, no
+ *      credentials needed, token valid for 30 days).
+ *   2. If refresh succeeds  → save new access_token, retry original request.
+ *   3. If refresh_token is missing or refresh fails → fall back to full credential
+ *      re-login via POST /api/mobile/auth/login.
+ *   4. If both fail → return null (OkHttp will propagate the 401 to the caller).
  */
 public class TokenAuthenticator implements okhttp3.Authenticator {
 
-    private static final String LOGIN_URL =
-            RetrofitClient.BASE_URL + "auth/login";
+    private static final String LOGIN_URL   = RetrofitClient.BASE_URL + "auth/login";
+    private static final String REFRESH_URL = RetrofitClient.BASE_URL + "auth/refresh";
     private static final int MAX_RETRIES = 1;
 
     private final TokenManager tokenManager;
@@ -40,11 +43,23 @@ public class TokenAuthenticator implements okhttp3.Authenticator {
         // Give up after MAX_RETRIES to avoid infinite refresh loops
         if (responseCount(response) >= MAX_RETRIES) return null;
 
+        // 1️⃣ Try refresh_token first (30-day lifetime, no credentials needed)
+        String refreshToken = tokenManager.getRefreshToken();
+        if (refreshToken != null) {
+            String newToken = useRefreshToken(refreshToken);
+            if (newToken != null) {
+                tokenManager.saveToken(newToken);
+                return response.request().newBuilder()
+                        .header("Authorization", "Bearer " + newToken)
+                        .build();
+            }
+        }
+
+        // 2️⃣ Fall back to full credential re-login
         String username = tokenManager.getUsername();
         String password = tokenManager.getPassword();
         if (username == null || password == null) return null;
 
-        // Synchronous re-login using a plain OkHttpClient (no auth interceptor)
         String newToken = refreshToken(username, password);
         if (newToken == null) return null;
 
@@ -53,6 +68,28 @@ public class TokenAuthenticator implements okhttp3.Authenticator {
         return response.request().newBuilder()
                 .header("Authorization", "Bearer " + newToken)
                 .build();
+    }
+
+    /** Exchanges a valid refresh token for a new access token via /auth/refresh. */
+    @Nullable
+    private String useRefreshToken(String refreshToken) {
+        try {
+            OkHttpClient plainClient = new OkHttpClient();
+            Request req = new Request.Builder()
+                    .url(REFRESH_URL)
+                    .post(RequestBody.create(new byte[0], null))
+                    .header("Authorization", "Bearer " + refreshToken)
+                    .build();
+            try (Response res = plainClient.newCall(req).execute()) {
+                if (res.isSuccessful() && res.body() != null) {
+                    LoginResponse lr = gson.fromJson(res.body().string(), LoginResponse.class);
+                    return lr != null ? lr.getAccessToken() : null;
+                }
+            }
+        } catch (IOException e) {
+            // Fall through to credential re-login
+        }
+        return null;
     }
 
     @Nullable

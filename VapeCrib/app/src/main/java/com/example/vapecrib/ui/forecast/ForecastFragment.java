@@ -38,7 +38,7 @@ public class ForecastFragment extends Fragment {
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        forecastViewModel = new ViewModelProvider(this).get(ForecastViewModel.class);
+        forecastViewModel = new ViewModelProvider(requireActivity()).get(ForecastViewModel.class);
         binding = FragmentForecastBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
@@ -89,6 +89,7 @@ public class ForecastFragment extends Fragment {
         ArrayAdapter<String> productAdapter = new ArrayAdapter<>(
             requireContext(), android.R.layout.simple_dropdown_item_1line, initial);
         binding.actvProduct.setAdapter(productAdapter);
+        binding.actvProduct.setSaveEnabled(false);
 
         // Years: 2022 to currentYear+1
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
@@ -97,16 +98,19 @@ public class ForecastFragment extends Fragment {
         ArrayAdapter<String> yearAdapter = new ArrayAdapter<>(
             requireContext(), android.R.layout.simple_dropdown_item_1line, years);
         binding.actvYear.setAdapter(yearAdapter);
+        binding.actvYear.setSaveEnabled(false);
 
         // Months
         ArrayAdapter<String> monthAdapter = new ArrayAdapter<>(
             requireContext(), android.R.layout.simple_dropdown_item_1line, MONTHS);
         binding.actvMonth.setAdapter(monthAdapter);
+        binding.actvMonth.setSaveEnabled(false);
 
         // Weeks
         ArrayAdapter<String> weekAdapter = new ArrayAdapter<>(
             requireContext(), android.R.layout.simple_dropdown_item_1line, WEEKS);
         binding.actvWeek.setAdapter(weekAdapter);
+        binding.actvWeek.setSaveEnabled(false);
     }
 
     //  Observers 
@@ -131,6 +135,7 @@ public class ForecastFragment extends Fragment {
             ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(), android.R.layout.simple_dropdown_item_1line, names);
             binding.actvProduct.setAdapter(adapter);
+            binding.actvProduct.setSaveEnabled(false);
         });
     }
 

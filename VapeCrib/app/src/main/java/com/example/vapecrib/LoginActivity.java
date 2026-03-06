@@ -111,6 +111,9 @@ public class LoginActivity extends AppCompatActivity {
 
                             // Save token + credentials for silent re-login
                             tokenManager.saveToken(response.body().getAccessToken());
+                            if (response.body().getRefreshToken() != null) {
+                                tokenManager.saveRefreshToken(response.body().getRefreshToken());
+                            }
                             tokenManager.saveCredentials(username, password);
 
                             launchMain();
