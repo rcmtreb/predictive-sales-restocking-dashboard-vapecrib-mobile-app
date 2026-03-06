@@ -26,8 +26,7 @@ public class RetrofitClient {
         TokenManager tm = TokenManager.getInstance(context);
 
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        // Use BODY in debug, NONE in release
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+        logging.setLevel(HttpLoggingInterceptor.Level.NONE);
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(new AuthInterceptor(tm))   // attach Bearer token
