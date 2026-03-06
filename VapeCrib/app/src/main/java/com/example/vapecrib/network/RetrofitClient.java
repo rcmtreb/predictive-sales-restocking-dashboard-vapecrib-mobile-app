@@ -28,8 +28,13 @@ public class RetrofitClient {
         TokenManager tm = TokenManager.getInstance(context);
 
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        // Use BODY in debug, NONE in release
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+        // Log full request/response bodies in debug builds only.
+        // Release builds use NONE to avoid leaking JWT tokens in logs.
+        boolean isDebuggable = (context.getApplicationInfo().flags
+                & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        logging.setLevel(isDebuggable
+                ? HttpLoggingInterceptor.Level.BODY
+                : HttpLoggingInterceptor.Level.NONE);
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(60, TimeUnit.SECONDS)  // Render free tier cold-start ≤60 s

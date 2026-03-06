@@ -9,12 +9,9 @@ import androidx.security.crypto.MasterKeys;
 /**
  * Manages JWT token + login credentials.
  *
- * The JWT token is kept IN MEMORY ONLY (static field).
- * When the app process is killed and restarted, the token is gone and the
- * user is taken back to the login screen — this is intentional.
- *
- * Credentials (username/password) are stored in EncryptedSharedPreferences
- * so the app can silently re-authenticate when a token expires mid-session.
+ * The JWT access token is now persisted in EncryptedSharedPreferences to survive
+ * app restarts and provide better user experience. Refresh tokens and credentials
+ * are also persisted for automatic re-authentication.
  */
 public class TokenManager {
 
@@ -22,6 +19,7 @@ public class TokenManager {
     private static final String KEY_USERNAME = "username";
     private static final String KEY_PASSWORD = "password";
     private static final String KEY_REFRESH  = "jwt_refresh_token";
+    private static final String KEY_ACCESS   = "jwt_access_token";
 
     // Token lives only in memory — process death = automatic logout
     private static String sessionToken = null;
@@ -53,13 +51,18 @@ public class TokenManager {
         return instance;
     }
 
-    // ── Token (in-memory only) ───────────────────────────────────────────────
+    // ── Token (now persisted to survive app restarts) ───────────────────────────────────────────────
 
     public void saveToken(String token) {
         sessionToken = token;
+        prefs.edit().putString(KEY_ACCESS, token).apply();
     }
 
     public String getToken() {
+        if (sessionToken == null) {
+            // Load from persistent storage on first access
+            sessionToken = prefs.getString(KEY_ACCESS, null);
+        }
         return sessionToken;
     }
 
@@ -93,6 +96,11 @@ public class TokenManager {
 
     public void clearAll() {
         sessionToken = null;
-        prefs.edit().clear().apply();
+        prefs.edit()
+             .remove(KEY_ACCESS)
+             .remove(KEY_USERNAME)
+             .remove(KEY_PASSWORD)
+             .remove(KEY_REFRESH)
+             .apply();
     }
 }

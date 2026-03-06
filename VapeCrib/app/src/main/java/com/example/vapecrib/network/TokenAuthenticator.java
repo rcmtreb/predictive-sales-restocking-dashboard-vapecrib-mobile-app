@@ -1,5 +1,7 @@
 package com.example.vapecrib.network;
 
+import android.util.Log;
+
 import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
@@ -40,29 +42,47 @@ public class TokenAuthenticator implements okhttp3.Authenticator {
     @Nullable
     @Override
     public Request authenticate(@Nullable Route route, okhttp3.Response response) {
+        Log.d("TokenAuthenticator", "401 received, attempting token refresh");
         // Give up after MAX_RETRIES to avoid infinite refresh loops
-        if (responseCount(response) >= MAX_RETRIES) return null;
+        if (responseCount(response) >= MAX_RETRIES) {
+            Log.w("TokenAuthenticator", "Max retries exceeded, giving up");
+            return null;
+        }
 
         // 1️⃣ Try refresh_token first (30-day lifetime, no credentials needed)
         String refreshToken = tokenManager.getRefreshToken();
         if (refreshToken != null) {
+            Log.d("TokenAuthenticator", "Attempting refresh token authentication");
             String newToken = useRefreshToken(refreshToken);
             if (newToken != null) {
+                Log.i("TokenAuthenticator", "Refresh token successful, retrying request");
                 tokenManager.saveToken(newToken);
                 return response.request().newBuilder()
                         .header("Authorization", "Bearer " + newToken)
                         .build();
+            } else {
+                Log.w("TokenAuthenticator", "Refresh token failed");
             }
+        } else {
+            Log.w("TokenAuthenticator", "No refresh token available");
         }
 
         // 2️⃣ Fall back to full credential re-login
+        Log.d("TokenAuthenticator", "Attempting credential re-login");
         String username = tokenManager.getUsername();
         String password = tokenManager.getPassword();
-        if (username == null || password == null) return null;
+        if (username == null || password == null) {
+            Log.w("TokenAuthenticator", "No credentials available for re-login");
+            return null;
+        }
 
         String newToken = refreshToken(username, password);
-        if (newToken == null) return null;
+        if (newToken == null) {
+            Log.e("TokenAuthenticator", "Credential re-login failed");
+            return null;
+        }
 
+        Log.i("TokenAuthenticator", "Credential re-login successful");
         tokenManager.saveToken(newToken);
 
         return response.request().newBuilder()

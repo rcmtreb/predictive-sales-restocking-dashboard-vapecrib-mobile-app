@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.vapecrib"
-        minSdk = 24
+        minSdk = 26  // java.time requires API 26+ (Android 8.0); used throughout the app
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"

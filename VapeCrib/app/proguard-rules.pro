@@ -1,21 +1,37 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ── Debug info ───────────────────────────────────────────────────────────────
+# Preserve class + line number info so crash reports are readable
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ── Gson / Retrofit model classes ────────────────────────────────────────────
+# Keep all network DTOs and model classes used by Gson for JSON deserialization.
+# @SerializedName protects field-to-JSON-key mapping, but the classes and their
+# default constructors must also be explicitly kept so R8 does not remove them.
+-keep class com.example.vapecrib.network.** { *; }
+-keep class com.example.vapecrib.model.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Preserve generic type signatures — required by Gson for TypeToken resolution
+# (Retrofit consumer rules already include this, but be explicit)
+-keepattributes Signature
+-keepattributes *Annotation*
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ── Retrofit ─────────────────────────────────────────────────────────────────
+# Retrofit's own consumer rules in its AAR handle most of this, but keep the
+# service interface methods explicitly so R8 does not strip HTTP-annotated ones.
+-keep,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+
+# ── OkHttp ───────────────────────────────────────────────────────────────────
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# ── MPAndroidChart ───────────────────────────────────────────────────────────
+-keep class com.github.mikephil.charting.** { *; }
+
+# ── Room database ────────────────────────────────────────────────────────────
+-keep class com.example.vapecrib.data.db.** { *; }
+
+# ── EncryptedSharedPreferences (Tink) ────────────────────────────────────────
+-dontwarn com.google.crypto.tink.**
+-keep class com.google.crypto.tink.** { *; }
