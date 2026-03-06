@@ -23,7 +23,6 @@ import com.github.mikephil.charting.data.LineDataSet;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -62,6 +61,10 @@ public class DashboardViewModel extends AndroidViewModel {
     // Default range: Last 7 Days — shows the most recent activity on first open.
     private LocalDate currentStartDate = LocalDate.now().minusDays(6);
     private LocalDate currentEndDate   = LocalDate.now();
+    /** UI label for the last-selected period, restored on navigation back. */
+    private String currentPeriodLabel = "Last 7 Days";
+    /** Server pre-aggregated monthly data; updated on every successful API fetch. */
+    private List<SalesChartResponse.MonthlyPoint> latestMonthlyPoints = new ArrayList<>();
 
     public DashboardViewModel(Application application) {
         super(application);
@@ -85,7 +88,6 @@ public class DashboardViewModel extends AndroidViewModel {
         currentEndDate   = end;
         if (dataLoaded) {
             bgExecutor.execute(() -> {
-                computeAndPost();
                 fetchFromApi(start, end);
                 fetchDashboard();
             });
@@ -110,6 +112,13 @@ public class DashboardViewModel extends AndroidViewModel {
                     .getSalesChart(fromDate, toDate, null)
                     .execute();
 
+            // Discard this response if the user changed the period while the request was
+            // in-flight — prevents a stale Last-7-Days fetch from overwriting the
+            // Last-30-Days results that may have already been applied on the other thread.
+            if (!start.equals(currentStartDate) || !end.equals(currentEndDate)) {
+                return;
+            }
+
             if (!response.isSuccessful() || response.body() == null
                     || response.body().data == null) {
                 int code = response.code();
@@ -126,8 +135,17 @@ public class DashboardViewModel extends AndroidViewModel {
                 return;
             }
 
-            // Fetch forecast data for the same range (still needed for the trend chart)
-            Map<LocalDate, Float> forecastByDate = fetchForecastMap(fromDate, toDate);
+            // Use server pre-aggregated monthly data directly for the bar chart
+            latestMonthlyPoints = (chart.monthly != null) ? chart.monthly : new ArrayList<>();
+
+            // Extend the forecast query window to include upcoming days so the trend
+            // chart can show a forecast projection even when historical per-day records
+            // are sparse. The extension matches the selected period length (capped at 30).
+            long periodDays = Math.max(7, ChronoUnit.DAYS.between(start, end) + 1);
+            LocalDate forecastQueryEnd = end.isBefore(LocalDate.now())
+                    ? end
+                    : LocalDate.now().plusDays(Math.min(periodDays, 30));
+            Map<LocalDate, Float> forecastByDate = fetchForecastMap(fromDate, forecastQueryEnd.toString());
 
             List<SalesData> fresh = new ArrayList<>();
             for (SalesChartResponse.DailyPoint pt : chart.daily) {
@@ -141,6 +159,19 @@ public class DashboardViewModel extends AndroidViewModel {
                             pt.revenue,    // revenue = daily total
                             pt.quantity)); // productsCount = units sold (meaningful KPI)
                 } catch (Exception ignored) {}
+            }
+
+            // Append future forecast-only entries so the trend chart shows an upcoming
+            // projection line beyond the last actual sale date — mirrors the web's
+            // Daily Forecast chart which shows actual (past) + forecast (future).
+            LocalDate today = LocalDate.now();
+            if (!today.isAfter(forecastQueryEnd)) {
+                for (LocalDate d = today.plusDays(1); !d.isAfter(forecastQueryEnd); d = d.plusDays(1)) {
+                    float fc = forecastByDate.getOrDefault(d, 0f);
+                    if (fc > 0f) {
+                        fresh.add(new SalesData(d, 0, fc, 0f, 0));
+                    }
+                }
             }
 
             allSalesData = fresh;
@@ -225,8 +256,8 @@ public class DashboardViewModel extends AndroidViewModel {
         highCount.postValue("Warning: "  + cachedHigh);
         mediumCount.postValue("Info: "    + cachedMedium);
 
-        buildSalesTrendChart(data);
-        buildMonthlyPerformanceChart(data);
+        buildSalesTrendChart(allSalesData);  // all data including future forecast entries
+        buildMonthlyPerformanceChart(latestMonthlyPoints);
     }
 
     /**
@@ -289,46 +320,71 @@ public class DashboardViewModel extends AndroidViewModel {
     }
 
     private void buildSalesTrendChart(List<SalesData> data) {
+        // Compute the average unit price from historical days ONLY (revenue > 0),
+        // so future-only forecast entries don't skew the divisor.
+        float totalRev = 0f, totalQty = 0f;
+        for (SalesData d : data) {
+            if (d.getRevenue() > 0f) {
+                totalRev += d.getRevenue();
+                totalQty += d.getActualSales();
+            }
+        }
+        float avgUnitPrice = totalQty > 0f ? totalRev / totalQty : 1f;
+
         List<Entry> actualEntries   = new ArrayList<>();
         List<Entry> forecastEntries = new ArrayList<>();
         int step = Math.max(1, data.size() / 60);
         int idx  = 0;
         for (int i = 0; i < data.size(); i += step) {
             SalesData d = data.get(i);
-            actualEntries.add(new Entry(idx, d.getActualSales()));
-            forecastEntries.add(new Entry(idx, d.getForecastedSales()));
+            // Only plot actual entry when there are real historical sales. Future-only
+            // entries (revenue = 0, forecast > 0) are skipped for the actual line so
+            // it stops naturally at the last real sale date — matches the web's null
+            // handling which breaks the actual line at the end of historical data.
+            if (d.getRevenue() > 0f) {
+                actualEntries.add(new Entry(idx, d.getRevenue()));
+            }
+            // Forecasted Revenue = forecast units × avg price — mirrors web dataset[1]
+            // "Forecasted Revenue". Also covers future projection entries.
+            if (d.getForecastedSales() > 0f) {
+                forecastEntries.add(new Entry(idx, d.getForecastedSales() * avgUnitPrice));
+            }
             idx++;
         }
 
-        LineDataSet actualSet = new LineDataSet(actualEntries, "Actual Sales");
-        actualSet.setColor(android.graphics.Color.parseColor("#FF9800"));
+        // Colors and style match web's trendChart (Forecast Trend Analysis):
+        //   Actual Revenue     → green  #34d399  (solid)
+        //   Forecasted Revenue → purple #818cf8  (dashed, mirrors web borderDash [6,3])
+        LineDataSet actualSet = new LineDataSet(actualEntries, "Actual Revenue");
+        actualSet.setColor(android.graphics.Color.parseColor("#34d399"));
         actualSet.setLineWidth(2f);
         actualSet.setDrawValues(false);
         actualSet.setDrawCircles(false);
 
-        LineDataSet forecastSet = new LineDataSet(forecastEntries, "Forecast");
-        forecastSet.setColor(android.graphics.Color.parseColor("#2196F3"));
+        LineDataSet forecastSet = new LineDataSet(forecastEntries, "Forecasted Revenue");
+        forecastSet.setColor(android.graphics.Color.parseColor("#818cf8"));
         forecastSet.setLineWidth(2f);
         forecastSet.setDrawValues(false);
         forecastSet.setDrawCircles(false);
+        forecastSet.enableDashedLine(12f, 6f, 0f); // mirrors web borderDash: [6, 3]
 
         LineData lineData = new LineData(actualSet, forecastSet);
         lineData.setValueTextColor(android.graphics.Color.WHITE);
         salesTrendData.postValue(lineData);
     }
 
-    private void buildMonthlyPerformanceChart(List<SalesData> data) {
-        Map<YearMonth, Float> monthly = new LinkedHashMap<>();
-        for (SalesData d : data) {
-            YearMonth ym = YearMonth.from(d.getDate());
-            monthly.merge(ym, d.getRevenue(), Float::sum);
-        }
+    private void buildMonthlyPerformanceChart(List<SalesChartResponse.MonthlyPoint> monthly) {
         List<BarEntry> entries = new ArrayList<>();
         int i = 0;
-        for (Float rev : monthly.values()) entries.add(new BarEntry(i++, rev / 1000f));
+        for (SalesChartResponse.MonthlyPoint pt : monthly) {
+            entries.add(new BarEntry(i++, pt.revenue / 1000f));
+        }
 
-        BarDataSet barSet = new BarDataSet(entries, "Monthly Revenue (P1k)");
-        barSet.setColor(android.graphics.Color.parseColor("#4CAF50"));
+        // Color and label mirror web's Historical Performance bar chart:
+        //   web backgroundColor: rgba(99,102,241,0.9) = indigo #6366f1
+        //   web label: "Monthly Sales"
+        BarDataSet barSet = new BarDataSet(entries, "Monthly Sales");
+        barSet.setColor(android.graphics.Color.parseColor("#6366f1"));
         barSet.setDrawValues(false);
         BarData barData = new BarData(barSet);
         barData.setBarWidth(0.7f);
@@ -379,6 +435,11 @@ public class DashboardViewModel extends AndroidViewModel {
             fetchDashboard();
         });
     }
+
+    public LocalDate getCurrentStartDate()    { return currentStartDate; }
+    public LocalDate getCurrentEndDate()      { return currentEndDate;   }
+    public String    getCurrentPeriodLabel()  { return currentPeriodLabel; }
+    public void      setCurrentPeriodLabel(String label) { this.currentPeriodLabel = label; }
 
     public LiveData<String>   getTotalSalesProducts()      { return totalSalesProducts;      }
     public LiveData<String>   getTotalSalesRevenue()       { return totalSalesRevenue;       }

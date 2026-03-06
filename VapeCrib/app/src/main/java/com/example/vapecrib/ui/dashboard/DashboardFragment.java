@@ -49,10 +49,11 @@ public class DashboardFragment extends Fragment {
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        // Initialize dates — Last 7 Days shows the most recent activity on first open.
-        // Matches the web's period=7d: filter_start = today - 6 days (7 days incl. today).
-        selectedStartDate = LocalDate.now().minusDays(6);
-        selectedEndDate   = LocalDate.now();
+        // Restore last-used period from the ViewModel so the label and chart data
+        // stay in sync after navigating away and back. Defaults to "Last 7 Days" on
+        // first open (ViewModel initialises currentStartDate/End to today-6..today).
+        selectedStartDate = dashboardViewModel.getCurrentStartDate();
+        selectedEndDate   = dashboardViewModel.getCurrentEndDate();
 
         // Apply saved display preferences
         applyDisplayPreferences();
@@ -93,10 +94,16 @@ public class DashboardFragment extends Fragment {
         });
         dashboardViewModel.getSalesTrendData().observe(getViewLifecycleOwner(), lineData -> {
             if (lineData != null) {
+                // Clear old chart state first — mirrors web's chart.destroy() + new Chart() pattern
+                binding.lineChart.clear();
                 binding.lineChart.setData(lineData);
+                lineData.notifyDataChanged();
+                binding.lineChart.notifyDataSetChanged();
                 binding.lineChart.getXAxis().setAxisMinimum(0);
-                int entryCount = lineData.getDataSetByIndex(0).getEntryCount();
-                binding.lineChart.getXAxis().setAxisMaximum(entryCount - 1);
+                // Use the data's actual X range: after skipping 0f forecast entries,
+                // the two datasets may have different counts; getXMax() gives the
+                // true rightmost x across both lines.
+                binding.lineChart.getXAxis().setAxisMaximum(lineData.getXMax());
                 updateChartVisibility();
                 SharedPreferences p = requireContext()
                     .getSharedPreferences(SettingsFragment.PREFS_NAME, Context.MODE_PRIVATE);
@@ -105,14 +112,23 @@ public class DashboardFragment extends Fragment {
                 } else {
                     binding.lineChart.invalidate();
                 }
+            } else {
+                binding.lineChart.clear();
+                binding.lineChart.invalidate();
             }
         });
         dashboardViewModel.getMonthlyPerformanceData().observe(getViewLifecycleOwner(), barData -> {
             if (barData != null) {
+                // Clear old chart state first — mirrors web's chart.destroy() + new Chart() pattern
+                binding.barChart.clear();
                 binding.barChart.setData(barData);
-                binding.barChart.getXAxis().setAxisMinimum(0);
+                barData.notifyDataChanged();
+                binding.barChart.notifyDataSetChanged();
                 int entryCount = barData.getDataSetByIndex(0).getEntryCount();
-                binding.barChart.getXAxis().setAxisMaximum(entryCount - 1);
+                // Give each bar half a bar-width of padding on both sides so edge
+                // bars are not clipped. MPAndroidChart convention: min = -0.5, max = n - 0.5
+                binding.barChart.getXAxis().setAxisMinimum(-0.5f);
+                binding.barChart.getXAxis().setAxisMaximum(entryCount - 0.5f);
                 SharedPreferences p = requireContext()
                     .getSharedPreferences(SettingsFragment.PREFS_NAME, Context.MODE_PRIVATE);
                 if (p.getBoolean(SettingsFragment.KEY_CHART_ANIM, true)) {
@@ -120,6 +136,9 @@ public class DashboardFragment extends Fragment {
                 } else {
                     binding.barChart.invalidate();
                 }
+            } else {
+                binding.barChart.clear();
+                binding.barChart.invalidate();
             }
         });
 
@@ -148,7 +167,7 @@ public class DashboardFragment extends Fragment {
         binding.actvTimePeriod.setAdapter(adapter);
         binding.actvTimePeriod.setSaveEnabled(false);
         // Pre-select "Last 7 Days" so the dropdown label matches the default data range
-        binding.actvTimePeriod.setText("Last 7 Days", false);
+        binding.actvTimePeriod.setText(dashboardViewModel.getCurrentPeriodLabel(), false);
         updateDateDisplay();
         binding.actvTimePeriod.setOnItemClickListener((parent, view, position, id) -> {
             handleTimePeriodSelection(position);
@@ -199,6 +218,12 @@ public class DashboardFragment extends Fragment {
                 return; // User will select dates manually
         }
         
+        // Persist the selected period label in the ViewModel so it survives navigation
+        String[] periodLabels = {"All Time", "Last 7 Days", "Last 30 Days",
+                "Last 3 Months", "Last 6 Months", "Last Year", "Custom"};
+        if (position < periodLabels.length) {
+            dashboardViewModel.setCurrentPeriodLabel(periodLabels[position]);
+        }
         updateDateDisplay();
         applyFilter();
     }
@@ -248,6 +273,7 @@ public class DashboardFragment extends Fragment {
 
     /** Called when a checkbox changes OR when settings prefs change visibility. */
     private void updateChartVisibility() {
+        if (binding == null) return;
         LineData lineData = binding.lineChart.getLineData();
         if (lineData != null) {
             boolean isActualChecked   = binding.cbActual.isChecked();

@@ -9,19 +9,20 @@ import androidx.lifecycle.MutableLiveData;
 import com.example.vapecrib.network.ForecastApiRecord;
 import com.example.vapecrib.network.PagedForecastResponse;
 import com.example.vapecrib.network.PagedProductsResponse;
-import com.example.vapecrib.network.PagedSalesResponse;
 import com.example.vapecrib.network.ProductApiRecord;
 import com.example.vapecrib.network.RetrofitClient;
-import com.example.vapecrib.network.SaleApiRecord;
+import com.example.vapecrib.network.SalesChartResponse;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,6 +37,8 @@ public class ForecastViewModel extends AndroidViewModel {
     /** Product names for the dropdown — starts with just "All Products", fills after API call. */
     private final MutableLiveData<List<String>> productNames        = new MutableLiveData<>();
     private final MutableLiveData<String>       apiError            = new MutableLiveData<>();
+    /** True while a background fetch is in-flight; drives the SwipeRefreshLayout indicator. */
+    private final MutableLiveData<Boolean>      isLoading           = new MutableLiveData<>(false);
 
     /** Maps product display-name → server product id. Null entry = "All Products". */
     private final Map<String, Integer> productIdMap = new LinkedHashMap<>();
@@ -67,6 +70,7 @@ public class ForecastViewModel extends AndroidViewModel {
     public LiveData<String>       getSelectedProductInfo() { return selectedProductInfo; }
     public LiveData<List<String>> getProductNames()        { return productNames;        }
     public LiveData<String>       getApiError()            { return apiError;            }
+    public LiveData<Boolean>      getIsLoading()           { return isLoading;           }
 
     public void filterByDateRange(LocalDate start, LocalDate end) {
         currentStartDate = start;
@@ -77,7 +81,11 @@ public class ForecastViewModel extends AndroidViewModel {
     public void setSelectedProduct(String product) {
         currentProduct   = (product == null || product.isEmpty()) ? "All Products" : product;
         currentProductId = productIdMap.get(currentProduct); // null for "All Products"
-        bgExecutor.execute(this::refreshForecastData);
+        // Do NOT trigger a fetch here. filterByDateRange() is always called right
+        // after on the same main thread, so let it do the single combined fetch.
+        // Triggering here would create a second concurrent task using STALE dates
+        // (set before filterByDateRange runs), which races against the correct task
+        // and can post null/empty, wiping the forecast line.
     }
 
     // ── Data loading ──────────────────────────────────────────────────────────
@@ -121,9 +129,17 @@ public class ForecastViewModel extends AndroidViewModel {
      * builds a line chart. Must be called on a background thread.
      */
     private void refreshForecastData() {
+        // Snapshot mutable state immediately so we can detect if the user changed
+        // filters while this fetch was in-flight and discard stale results.
+        final LocalDate snapStart     = currentStartDate;
+        final LocalDate snapEnd       = currentEndDate;
+        final String    snapProduct   = currentProduct;
+        final Integer   snapProductId = currentProductId;
+
+        isLoading.postValue(true);
         try {
-            String fromDate = currentStartDate.toString();
-            String toDate   = currentEndDate.toString();
+            String fromDate = snapStart.toString();
+            String toDate   = snapEnd.toString();
 
             // ── Forecast rows ──────────────────────────────────────────────────
             Map<LocalDate, Float> forecastMap = new TreeMap<>();
@@ -132,7 +148,7 @@ public class ForecastViewModel extends AndroidViewModel {
                 Response<PagedForecastResponse> resp = RetrofitClient
                         .getInstance(getApplication())
                         .getApi()
-                        .getForecast(fromDate, toDate, currentProductId, page, 100)
+                        .getForecast(fromDate, toDate, snapProductId, page, 100)
                         .execute();
                 if (!resp.isSuccessful()) break;
                 PagedForecastResponse body = resp.body();
@@ -150,29 +166,29 @@ public class ForecastViewModel extends AndroidViewModel {
                 page++;
             }
 
-            // ── Actual sales rows ──────────────────────────────────────────────
+            // ── Actual sales rows: use pre-aggregated chart data ───────────────────
+            // Mirrors DashboardViewModel — one request instead of many paginated
+            // transaction pages. The chart endpoint returns daily quantity totals
+            // which is exactly what the forecast chart needs.
             Map<LocalDate, Float> salesMap = new TreeMap<>();
-            page = 1;
-            while (true) {
-                Response<PagedSalesResponse> resp = RetrofitClient
+            try {
+                Response<SalesChartResponse> chartResp = RetrofitClient
                         .getInstance(getApplication())
                         .getApi()
-                        .getSales(fromDate, toDate, currentProductId, page, 100)
+                        .getSalesChart(fromDate, toDate, snapProductId)
                         .execute();
-                if (!resp.isSuccessful()) break;
-                PagedSalesResponse body = resp.body();
-                if (body == null || body.getData() == null) break;
-                for (SaleApiRecord s : body.getData()) {
-                    if (s.date == null) continue;
-                    try {
-                        // sale_date from Flask is a full ISO datetime — take date part only
-                        LocalDate d = LocalDate.parse(s.date.substring(0, 10));
-                        salesMap.merge(d, s.actualSales, Float::sum);
-                    } catch (Exception ignored) {}
+                if (chartResp.isSuccessful() && chartResp.body() != null
+                        && chartResp.body().data != null
+                        && chartResp.body().data.daily != null) {
+                    for (SalesChartResponse.DailyPoint pt : chartResp.body().data.daily) {
+                        if (pt.date == null) continue;
+                        try {
+                            LocalDate d = LocalDate.parse(pt.date);
+                            salesMap.put(d, (float) pt.quantity);
+                        } catch (Exception ignored) {}
+                    }
                 }
-                if (page >= body.getPages() || body.getPages() == 0) break;
-                page++;
-            }
+            } catch (Exception ignored) {}
 
             // ── Merge into chart entries ───────────────────────────────────────
             // Union of all dates from both maps
@@ -182,6 +198,13 @@ public class ForecastViewModel extends AndroidViewModel {
             salesMap.forEach((d, v) ->
                     merged.computeIfAbsent(d, k -> new float[2])[0] += v);
 
+            // Stale-guard: if the user changed filters while this fetch was running,
+            // discard the result — the newer task will post its own correct data.
+            if (!snapStart.equals(currentStartDate) || !snapEnd.equals(currentEndDate)
+                    || !snapProduct.equals(currentProduct)) {
+                return;
+            }
+
             if (merged.isEmpty()) {
                 forecastData.postValue(null);
                 forecastSummary.postValue("No data available for selected period.");
@@ -190,39 +213,68 @@ public class ForecastViewModel extends AndroidViewModel {
                 return;
             }
 
-            buildChartFromMerged(merged);
+            buildChartFromMerged(merged, new HashSet<>(salesMap.keySet()));
 
         } catch (Exception e) {
             apiError.postValue("Failed to load forecast: " + e.getMessage());
+        } finally {
+            isLoading.postValue(false);
         }
     }
 
-    private void buildChartFromMerged(Map<LocalDate, float[]> merged) {
+    /**
+     * Builds chart entries following the same 2-variable pattern as the web's
+     * renderDailyForecastChart: actual line only covers historical dates with real
+     * sales data; forecast line covers ALL dates (historical comparison + future
+     * predictions). Missing data points are omitted rather than plotted as 0,
+     * which creates a natural gap/stop just as the web uses null values.
+     */
+    private void buildChartFromMerged(Map<LocalDate, float[]> merged, Set<LocalDate> actualDates) {
         List<Entry> actualEntries   = new ArrayList<>();
         List<Entry> forecastEntries = new ArrayList<>();
 
-        int step = Math.max(1, merged.size() / 60);
-        int idx  = 0;
+        int step     = Math.max(1, merged.size() / 60);
+        int rawIdx   = 0;
+        int plotIdx  = 0;
         float totalActual = 0, totalForecast = 0;
 
-        List<float[]> valueList = new ArrayList<>(merged.values());
-        for (int i = 0; i < valueList.size(); i += step) {
-            float actual   = valueList.get(i)[0];
-            float forecast = valueList.get(i)[1];
-            actualEntries.add(new Entry(idx, actual));
-            forecastEntries.add(new Entry(idx, forecast));
-            idx++;
-        }
-        for (float[] v : valueList) { totalActual += v[0]; totalForecast += v[1]; }
+        for (Map.Entry<LocalDate, float[]> e : merged.entrySet()) {
+            if (rawIdx % step == 0) {
+                LocalDate date   = e.getKey();
+                float actual     = e.getValue()[0];
+                float forecast   = e.getValue()[1];
 
-        LineDataSet actualSet = new LineDataSet(actualEntries, "Actual");
-        actualSet.setColor(android.graphics.Color.parseColor("#FF9800"));
+                // Mirror web: actual line only for dates with real historical sales.
+                // Future-only forecast dates have no entry here, so the actual line
+                // stops naturally at the last day with real data (no artificial 0 drop).
+                if (actualDates.contains(date)) {
+                    actualEntries.add(new Entry(plotIdx, actual));
+                    totalActual += actual;
+                }
+
+                // Forecast line covers both historical comparison and future predictions.
+                // Only skip if there is genuinely no forecast value for this date.
+                if (forecast > 0) {
+                    forecastEntries.add(new Entry(plotIdx, forecast));
+                    totalForecast += forecast;
+                }
+
+                plotIdx++;
+            }
+            rawIdx++;
+        }
+
+        // Colors match the web app's renderDailyForecastChart:
+        //   Actual Sales   → green  #34d399
+        //   Forecasted Sales → purple #818cf8  (dashed, same as web)
+        LineDataSet actualSet = new LineDataSet(actualEntries, "Actual Sales");
+        actualSet.setColor(android.graphics.Color.parseColor("#34d399"));
         actualSet.setLineWidth(2f);
         actualSet.setDrawValues(false);
         actualSet.setDrawCircles(false);
 
-        LineDataSet forecastSet = new LineDataSet(forecastEntries, "Forecast");
-        forecastSet.setColor(android.graphics.Color.parseColor("#2196F3"));
+        LineDataSet forecastSet = new LineDataSet(forecastEntries, "Forecasted Sales");
+        forecastSet.setColor(android.graphics.Color.parseColor("#818cf8"));
         forecastSet.setLineWidth(2f);
         forecastSet.setDrawValues(false);
         forecastSet.setDrawCircles(false);
