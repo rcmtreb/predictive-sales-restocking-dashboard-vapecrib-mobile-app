@@ -44,7 +44,7 @@ public class DashboardFragment extends Fragment {
 
     @SuppressLint("NewApi")
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
+        dashboardViewModel = new ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
 
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
@@ -146,6 +146,7 @@ public class DashboardFragment extends Fragment {
             }
         };
         binding.actvTimePeriod.setAdapter(adapter);
+        binding.actvTimePeriod.setSaveEnabled(false);
         // Pre-select "Last 7 Days" so the dropdown label matches the default data range
         binding.actvTimePeriod.setText("Last 7 Days", false);
         updateDateDisplay();

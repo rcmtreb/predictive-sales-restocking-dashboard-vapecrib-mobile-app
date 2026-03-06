@@ -34,7 +34,7 @@ public class ReportsFragment extends Fragment {
     @SuppressLint("NewApi")
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        reportsViewModel = new ViewModelProvider(this).get(ReportsViewModel.class);
+        reportsViewModel = new ViewModelProvider(requireActivity()).get(ReportsViewModel.class);
         binding = FragmentReportsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
@@ -59,6 +59,7 @@ public class ReportsFragment extends Fragment {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 getContext(), android.R.layout.simple_dropdown_item_1line, timePeriods);
         binding.actvTimePeriod.setAdapter(adapter);
+        binding.actvTimePeriod.setSaveEnabled(false);
         binding.actvTimePeriod.setOnItemClickListener(
                 (parent, view, position, id) -> handleTimePeriodSelection(position));
 

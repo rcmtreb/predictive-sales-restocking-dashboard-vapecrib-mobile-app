@@ -21,6 +21,7 @@ public class TokenManager {
     private static final String PREFS_FILE   = "vapecrib_secure";
     private static final String KEY_USERNAME = "username";
     private static final String KEY_PASSWORD = "password";
+    private static final String KEY_REFRESH  = "jwt_refresh_token";
 
     // Token lives only in memory — process death = automatic logout
     private static String sessionToken = null;
@@ -77,6 +78,16 @@ public class TokenManager {
 
     public String getUsername() { return prefs.getString(KEY_USERNAME, null); }
     public String getPassword() { return prefs.getString(KEY_PASSWORD, null); }
+
+    // ── Refresh token (persisted — survives process death) ─────────────────────────
+
+    public void saveRefreshToken(String token) {
+        prefs.edit().putString(KEY_REFRESH, token).apply();
+    }
+
+    public String getRefreshToken() {
+        return prefs.getString(KEY_REFRESH, null);
+    }
 
     // ── Clear all (on logout) ─────────────────────────────────────────────────
 

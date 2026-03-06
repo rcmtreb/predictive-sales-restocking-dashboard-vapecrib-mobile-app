@@ -38,6 +38,7 @@ public class ProductsFragment extends Fragment {
                 android.R.layout.simple_dropdown_item_1line,
                 ProductsViewModel.STOCK_FILTER_OPTIONS);
         binding.actvStockFilter.setAdapter(filterAdapter);
+        binding.actvStockFilter.setSaveEnabled(false);
         // No pre-selection — empty = show all
         binding.actvStockFilter.setOnItemClickListener((parent, view, position, id) ->
                 productsViewModel.setStockLevelFilter(
