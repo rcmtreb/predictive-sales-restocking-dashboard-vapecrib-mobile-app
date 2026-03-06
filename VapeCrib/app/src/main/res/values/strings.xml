@@ -34,8 +34,8 @@
     <string name="forecast">Forecast</string>
     <string name="monthly_performance">Monthly Performance</string>
     <string name="monthly_sales_performance">Monthly Sales Performance</string>
-    <string name="sales_forecast">Sales Forecast</string>
-    <string name="monthly_sales_forecast">Monthly Sales Forecast</string>
+    <string name="sales_forecast">Daily Forecast</string>
+    <string name="monthly_sales_forecast">Actual vs. Forecast (Units)</string>
     <string name="product">Product</string>
     <string name="year">Year</string>
     <string name="month">Month</string>

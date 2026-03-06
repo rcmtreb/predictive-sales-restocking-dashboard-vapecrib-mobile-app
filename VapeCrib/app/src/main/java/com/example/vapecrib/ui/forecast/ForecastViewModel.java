@@ -206,8 +206,11 @@ public class ForecastViewModel extends AndroidViewModel {
             }
 
             if (merged.isEmpty()) {
-                forecastData.postValue(null);
-                forecastSummary.postValue("No data available for selected period.");
+                // Post an empty-but-non-null LineData so the onCreateView null-guard
+                // does NOT re-trigger another fetch every time the user navigates back.
+                // (null would cause an infinite fetch→null→navigate back→fetch loop.)
+                forecastData.postValue(new LineData());
+                forecastSummary.postValue("No sales or forecast data for this period.\nTry a different week, or go to the web admin and run Refresh All Forecasts.");
                 selectedProductInfo.postValue(currentProduct.equals("All Products")
                         ? "Showing aggregated data" : "Product: " + currentProduct);
                 return;
@@ -265,34 +268,42 @@ public class ForecastViewModel extends AndroidViewModel {
         }
 
         // Colors match the web app's renderDailyForecastChart:
-        //   Actual Sales   → green  #34d399
-        //   Forecasted Sales → purple #818cf8  (dashed, same as web)
-        LineDataSet actualSet = new LineDataSet(actualEntries, "Actual Sales");
+        //   Actual (units)   → green  #34d399
+        //   Forecast (units) → purple #818cf8  (dashed, same as web)
+        LineDataSet actualSet = new LineDataSet(actualEntries, "Actual (units)");
         actualSet.setColor(android.graphics.Color.parseColor("#34d399"));
         actualSet.setLineWidth(2f);
         actualSet.setDrawValues(false);
         actualSet.setDrawCircles(false);
 
-        LineDataSet forecastSet = new LineDataSet(forecastEntries, "Forecasted Sales");
-        forecastSet.setColor(android.graphics.Color.parseColor("#818cf8"));
-        forecastSet.setLineWidth(2f);
-        forecastSet.setDrawValues(false);
-        forecastSet.setDrawCircles(false);
-        forecastSet.enableDashedLine(10f, 5f, 0f);
+        LineData lineData;
+        if (forecastEntries.isEmpty()) {
+            // No forecast rows in DB for this period — only render actual sales line.
+            // Omit the forecast dataset entirely so a ghost legend entry with no
+            // line doesn't confuse the user.
+            lineData = new LineData(actualSet);
+            forecastSummary.postValue(
+                    "No forecast data for this period.\nTo generate forecasts, go to the web admin → Refresh All Forecasts.");
+        } else {
+            LineDataSet forecastSet = new LineDataSet(forecastEntries, "Forecast (units)");
+            forecastSet.setColor(android.graphics.Color.parseColor("#818cf8"));
+            forecastSet.setLineWidth(2f);
+            forecastSet.setDrawValues(false);
+            forecastSet.setDrawCircles(false);
+            forecastSet.enableDashedLine(10f, 5f, 0f);
 
-        LineData lineData = new LineData(actualSet, forecastSet);
+            lineData = new LineData(actualSet, forecastSet);
+
+            // Compute accuracy from actual vs forecast totals (same method as web dashboard)
+            float accuracy = totalActual > 0
+                    ? Math.max(0, 100f - (Math.abs(totalActual - totalForecast) / totalActual) * 100f)
+                    : 0f;
+            forecastSummary.postValue(String.format(
+                    "Forecast: %.0f units  |  Actual: %.0f units  |  Accuracy: %.1f%%",
+                    totalForecast, totalActual, accuracy));
+        }
         lineData.setValueTextColor(android.graphics.Color.WHITE);
         forecastData.postValue(lineData);
-
-        // Compute accuracy from actual vs forecast totals (same method as web dashboard)
-        float accuracy = totalActual > 0
-                ? Math.max(0, 100f - (Math.abs(totalActual - totalForecast) / totalActual) * 100f)
-                : 0f;
-
-        forecastSummary.postValue(String.format(
-                "Period: %s to %s  |  Accuracy: %.1f%%\n" +
-                "Total Actual: %.0f units  |  Total Forecast: %.0f units",
-                currentStartDate, currentEndDate, accuracy, totalActual, totalForecast));
 
         selectedProductInfo.postValue(currentProduct.equals("All Products")
                 ? "Showing aggregated data for all products"

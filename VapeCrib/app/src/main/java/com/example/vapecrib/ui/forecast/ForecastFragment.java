@@ -49,29 +49,17 @@ public class ForecastFragment extends Fragment {
         observeViewModel();
         setupLoadButton();
 
-        // Auto-load only on first creation — if the ViewModel already has chart data
-        // (e.g., user navigated away and came back) keep the existing state so filters
-        // and product selections survive navigation.
-        LocalDate today = LocalDate.now();
-        LocalDate defaultStart = LocalDate.of(today.getYear(), today.getMonthValue(), 1);
-        // Use end of month (not today) so the forecast query also covers future dates.
-        // This ensures the upcoming-forecast line appears even if historical per-day
-        // forecasts are sparse — mirrors the web's Daily Forecast which shows the
-        // full selected week (past actuals + future forecast) on the same chart.
-        LocalDate defaultEnd = LocalDate.of(today.getYear(), today.getMonthValue(), today.lengthOfMonth());
+        // Auto-load on first creation using whichever week applyDefaultSelections()
+        // already selected. If the ViewModel already has chart data from a previous
+        // visit, keep it so filters survive back-navigation.
         if (forecastViewModel.getForecastData().getValue() == null) {
-            forecastViewModel.setSelectedProduct("All Products");
-            forecastViewModel.filterByDateRange(defaultStart, defaultEnd);
+            applyForecastFilter();
         }
 
-        // Pull-to-refresh
+        // Pull-to-refresh resets to current week defaults and reloads.
         binding.swipeRefreshLayout.setOnRefreshListener(() -> {
             applyDefaultSelections();
-            LocalDate refreshNow = LocalDate.now();
-            forecastViewModel.setSelectedProduct("All Products");
-            forecastViewModel.filterByDateRange(
-                LocalDate.of(refreshNow.getYear(), refreshNow.getMonthValue(), 1),
-                LocalDate.of(refreshNow.getYear(), refreshNow.getMonthValue(), refreshNow.lengthOfMonth()));
+            applyForecastFilter();
             binding.swipeRefreshLayout.setRefreshing(false);
         });
 
@@ -149,43 +137,56 @@ public class ForecastFragment extends Fragment {
         int initMonth = Calendar.getInstance().get(Calendar.MONTH) + 1;
         populateWeeks(initYear, initMonth);
 
-        // When year changes, recalculate week options for the new year/month combo.
+        // Year change → repopulate weeks (auto-selects week) + auto-load.
         binding.actvYear.setOnItemClickListener((parent, view, pos, id) -> {
             String selYear  = binding.actvYear.getText().toString().trim();
             String selMonth = binding.actvMonth.getText().toString().trim();
             if (!selYear.isEmpty() && !selMonth.isEmpty()) {
                 try {
                     int mo = getMonthNumber(selMonth);
-                    if (mo != -1) populateWeeks(Integer.parseInt(selYear), mo);
+                    if (mo != -1) {
+                        populateWeeks(Integer.parseInt(selYear), mo);
+                        applyForecastFilter();
+                    }
                 } catch (NumberFormatException ignored) {}
             }
         });
 
-        // When month changes, recalculate week options for the new month.
+        // Month change → repopulate weeks (auto-selects week) + auto-load.
         binding.actvMonth.setOnItemClickListener((parent, view, pos, id) -> {
             String selYear  = binding.actvYear.getText().toString().trim();
             String selMonth = binding.actvMonth.getText().toString().trim();
             if (!selYear.isEmpty() && !selMonth.isEmpty()) {
                 try {
                     int mo = getMonthNumber(selMonth);
-                    if (mo != -1) populateWeeks(Integer.parseInt(selYear), mo);
+                    if (mo != -1) {
+                        populateWeeks(Integer.parseInt(selYear), mo);
+                        applyForecastFilter();
+                    }
                 } catch (NumberFormatException ignored) {}
             }
         });
+
+        // Week change → auto-load immediately (matches web's wEl change listener).
+        binding.actvWeek.setOnItemClickListener((parent, view, pos, id) -> applyForecastFilter());
+
+        // Product change → auto-load immediately.
+        binding.actvProduct.setOnItemClickListener((parent, view, pos, id) -> applyForecastFilter());
     }
 
     /**
      * Recalculates week options based on the actual number of days in the given month,
      * matching the web app's populateWeeks() function. Each option shows its exact
-     * day range, e.g. "Week 3 (15-21)". Auto-resets the week dropdown to empty.
+     * day range, e.g. "Week 3 (15-21)".
+     * Matches the web: no "All Weeks" blank option; auto-selects current week for
+     * the current month/year, otherwise defaults to Week 1.
      */
     private void populateWeeks(int year, int month) {
         int numDays  = LocalDate.of(year, month, 1).lengthOfMonth();
         int numWeeks = (int) Math.ceil(numDays / 7.0);
 
         currentWeekOptions = new ArrayList<>();
-        currentWeekOptions.add(""); // "All Weeks" placeholder — empty means no week filter
-
+        // No blank "All Weeks" option — start directly with Week 1, matching the web.
         for (int w = 1; w <= numWeeks; w++) {
             int dayStart = (w - 1) * 7 + 1;
             int dayEnd   = Math.min(w * 7, numDays);
@@ -193,28 +194,34 @@ public class ForecastFragment extends Fragment {
         }
 
         binding.actvWeek.setAdapter(noFilterAdapter(new ArrayList<>(currentWeekOptions)));
-        binding.actvWeek.setText("", false);
         binding.actvWeek.setSaveEnabled(false);
+
+        // Auto-select the current week when viewing the current month/year (mirrors
+        // the web's auto-select). For any other month/year, default to Week 1.
+        LocalDate today = LocalDate.now();
+        if (year == today.getYear() && month == today.getMonthValue()) {
+            int weekIdx = (today.getDayOfMonth() - 1) / 7; // 0-based
+            binding.actvWeek.setText(
+                    currentWeekOptions.get(Math.min(weekIdx, currentWeekOptions.size() - 1)), false);
+        } else {
+            binding.actvWeek.setText(currentWeekOptions.get(0), false);
+        }
     }
 
-    /** Pre-fills the dropdowns with "All Products", the current year, and the current month.
-     *  Also populates week options for the current month and auto-selects the current week.
-     *  Matches the web's DOMContentLoaded initialization which pre-selects
-     *  currentYear, currentMonth, and the current week number. */
+    /**
+     * Resets all dropdowns to their defaults: blank product (= All Products), current
+     * year and month, and the current week auto-selected by populateWeeks().
+     * Mirrors the web page's DOMContentLoaded initialization.
+     */
     private void applyDefaultSelections() {
         LocalDate today = LocalDate.now();
         int  currentYear  = today.getYear();
         int  currentMonth = today.getMonthValue();
-        String defaultYear  = String.valueOf(currentYear);
-        String defaultMonth = MONTHS[currentMonth - 1];
 
         binding.actvProduct.setText("", false);
-        binding.actvYear.setText(defaultYear, false);
-        binding.actvMonth.setText(defaultMonth, false);
-
-        // Populate weeks for current month; leave week selection blank so clicking
-        // Load Forecast queries the full month — consistent with the initial auto-load
-        // which always uses the first-to-last day of the selected month.
+        binding.actvYear.setText(String.valueOf(currentYear), false);
+        binding.actvMonth.setText(MONTHS[currentMonth - 1], false);
+        // populateWeeks auto-selects the current week for today's month/year.
         populateWeeks(currentYear, currentMonth);
     }
 
@@ -226,8 +233,15 @@ public class ForecastFragment extends Fragment {
         forecastViewModel.getIsLoading().observe(getViewLifecycleOwner(),
                 loading -> binding.swipeRefreshLayout.setRefreshing(Boolean.TRUE.equals(loading)));
 
+        // Update the chart card subtitle with forecast status (e.g. "no forecast data" hint).
+        forecastViewModel.getForecastSummary().observe(getViewLifecycleOwner(), summary -> {
+            if (summary != null && !summary.isEmpty()) {
+                binding.tvForecastHint.setText(summary);
+            }
+        });
+
         forecastViewModel.getForecastData().observe(getViewLifecycleOwner(), lineData -> {
-            if (lineData != null) {
+            if (lineData != null && lineData.getDataSetCount() > 0) {
                 // Clear old chart data first — mirrors web's chart.destroy() + new Chart()
                 // pattern, preventing stale dataset state when navigating back to this page.
                 binding.forecastLineChart.clear();
@@ -235,14 +249,17 @@ public class ForecastFragment extends Fragment {
                 lineData.notifyDataChanged();
                 binding.forecastLineChart.notifyDataSetChanged();
                 binding.forecastLineChart.getXAxis().setAxisMinimum(0);
-                // Use the data's actual X range so the axis covers both the historical
-                // actual line AND the extended future forecast line. The two datasets
-                // can have different entry counts (actual stops at last real sale;
-                // forecast continues into future slots), so getXMax() is correct here
-                // rather than using entryCount-1 from either individual dataset.
-                binding.forecastLineChart.getXAxis().setAxisMaximum(lineData.getXMax());
+                // Only set axis maximum when there is real data; getXMax() returns
+                // Float.NaN on an empty LineData which crashes setAxisMaximum().
+                float xMax = lineData.getXMax();
+                if (!Float.isNaN(xMax) && xMax >= 0) {
+                    binding.forecastLineChart.getXAxis().setAxisMaximum(xMax);
+                }
                 binding.forecastLineChart.animateX(500);
             } else {
+                // null  = truly unloaded (first open guard)
+                // empty LineData = period has no data; keep the chart blank so the
+                //   user sees empty axes rather than a stale previous period's data.
                 binding.forecastLineChart.clear();
                 binding.forecastLineChart.invalidate();
             }
@@ -295,8 +312,7 @@ public class ForecastFragment extends Fragment {
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = null;
 
-        // Narrow to week if a specific week is chosen.
-        // Parse the dynamic format "Week N (D1-D2)" produced by populateWeeks().
+        // Narrow to the selected week. Parse "Week N (D1-D2)" produced by populateWeeks().
         if (!weekText.isEmpty()) {
             int parenStart = weekText.indexOf('(');
             int parenEnd   = weekText.indexOf(')');
@@ -307,9 +323,11 @@ public class ForecastFragment extends Fragment {
                     int dayEnd   = Integer.parseInt(parts[1].trim());
                     start = LocalDate.of(year, month, dayStart);
                     end   = LocalDate.of(year, month, dayEnd);
-                } catch (Exception ignored) {} // fall through to full-month range
+                } catch (Exception ignored) {}
             }
-        } else {
+        }
+        // Fallback: full month if week was blank or parsing failed
+        if (end == null) {
             end = start.withDayOfMonth(start.lengthOfMonth());
         }
 
@@ -325,13 +343,9 @@ public class ForecastFragment extends Fragment {
         start = start.isBefore(dataMin) ? dataMin : start;
         end   = end.isAfter(dataMax)    ? dataMax : end;
 
-        // Update product selection
+        // Update product selection and fetch — no toast needed (spinner provides feedback).
         forecastViewModel.setSelectedProduct(productText.isEmpty() ? "All Products" : productText);
-
         forecastViewModel.filterByDateRange(start, end);
-        Toast.makeText(requireContext(),
-            "Loaded: " + productText + "  " + monthText + " " + year,
-            Toast.LENGTH_SHORT).show();
     }
 
     private int getMonthNumber(String name) {

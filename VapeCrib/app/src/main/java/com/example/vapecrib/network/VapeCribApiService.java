@@ -5,6 +5,7 @@ import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
+import retrofit2.http.Headers;
 
 /**
  * Retrofit interface matching your Flask blueprint:
@@ -92,6 +93,14 @@ public interface VapeCribApiService {
      */
     @GET("ping")
     Call<okhttp3.ResponseBody> ping();
+
+    /**
+     * Create a new product. Admin / Manager accounts only.
+     * Matches: POST /api/mobile/products
+     */
+    @Headers("Content-Type: application/json")
+    @POST("products")
+    Call<AddProductResponse> createProduct(@Body AddProductRequest body);
 
     /**
      * MAPE-based forecast accuracy — same calculation method as the web dashboard.

@@ -7,16 +7,20 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.example.vapecrib.model.InventoryItem;
+import com.example.vapecrib.network.AddProductRequest;
+import com.example.vapecrib.network.AddProductResponse;
 import com.example.vapecrib.network.PagedProductsResponse;
 import com.example.vapecrib.network.ProductApiRecord;
 import com.example.vapecrib.network.RetrofitClient;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import retrofit2.Response;
 
 public class ProductsViewModel extends AndroidViewModel {
 
@@ -160,6 +164,50 @@ public class ProductsViewModel extends AndroidViewModel {
                 level,
                 false // isExpiringSoon — not available from the products endpoint
         );
+    }
+
+    // ── Product creation ──────────────────────────────────────────────────────
+
+    public interface CreateProductCallback {
+        void onSuccess(String productName);
+        void onError(String message);
+    }
+
+    public void createProduct(String name, String category, float unitCost, int currentStock,
+                              CreateProductCallback callback) {
+        AddProductRequest req = new AddProductRequest(name, category, unitCost, currentStock);
+        RetrofitClient.getInstance(getApplication())
+                .getApi()
+                .createProduct(req)
+                .enqueue(new Callback<AddProductResponse>() {
+                    @Override
+                    public void onResponse(Call<AddProductResponse> call,
+                                           Response<AddProductResponse> response) {
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().success) {
+                            String created = response.body().data != null
+                                    ? response.body().data.name : name;
+                            callback.onSuccess(created);
+                            // Refresh the list so the new product appears
+                            bgExecutor.execute(ProductsViewModel.this::loadFromApi);
+                        } else {
+                            String err = "Failed to add product";
+                            if (response.body() != null && response.body().error != null) {
+                                err = response.body().error;
+                            } else if (response.code() == 403) {
+                                err = "You don't have permission to add products.";
+                            } else if (response.code() == 409) {
+                                err = "A product with that name already exists.";
+                            }
+                            callback.onError(err);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<AddProductResponse> call, Throwable t) {
+                        callback.onError("Network error: " + t.getMessage());
+                    }
+                });
     }
 
     @Override

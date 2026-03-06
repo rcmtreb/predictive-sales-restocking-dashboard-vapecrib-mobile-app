@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-    android:id="@+id/swipeRefreshLayout"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/page_bg">
+
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    android:id="@+id/swipeRefreshLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.products.ProductsFragment">
@@ -93,7 +98,7 @@
             android:textSize="13sp" />
     </LinearLayout>
 
-    <!-- Inventory RecyclerView -->
+    <!-- Inventory RecyclerView — extra bottom padding so last card isn't hidden behind FAB -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_inventory"
         android:layout_width="match_parent"
@@ -102,9 +107,24 @@
         android:clipToPadding="false"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:paddingBottom="8dp"
+        android:paddingBottom="80dp"
         tools:listitem="@layout/item_inventory" />
 
     </LinearLayout>
 
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+<!-- FAB: Add Product — lower-right, floats above the list -->
+<com.google.android.material.floatingactionbutton.FloatingActionButton
+    android:id="@+id/fab_add_product"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom|end"
+    android:layout_margin="20dp"
+    android:contentDescription="Add Product"
+    android:src="@android:drawable/ic_input_add"
+    app:backgroundTint="@color/primary_light"
+    app:tint="@color/white"
+    app:elevation="6dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
