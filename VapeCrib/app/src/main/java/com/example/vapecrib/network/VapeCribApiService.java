@@ -110,5 +110,32 @@ public interface VapeCribApiService {
     Call<ForecastAccuracyResponse> getForecastAccuracy(
             @Query("days_back") int daysBack
     );
+
+    /**
+     * Sales report — same data as the web Reports page.
+     * Matches: GET /api/mobile/reports/sales?period=7d|30d|90d|1y|all
+     */
+    @GET("reports/sales")
+    Call<SalesReportResponse> getSalesReport(
+            @Query("period") String period
+    );
+
+    /**
+     * Inventory report — same data as the web Reports page.
+     * Matches: GET /api/mobile/reports/inventory?type=current|low|all
+     */
+    @GET("reports/inventory")
+    Call<InventoryReportResponse> getInventoryReport(
+            @Query("type") String type
+    );
+
+    /**
+     * Import history — same data as the web Reports page.
+     * Matches: GET /api/mobile/reports/imports?limit=10|25|50|all
+     */
+    @GET("reports/imports")
+    Call<ImportHistoryResponse> getImportHistory(
+            @Query("limit") String limit
+    );
 }
 
