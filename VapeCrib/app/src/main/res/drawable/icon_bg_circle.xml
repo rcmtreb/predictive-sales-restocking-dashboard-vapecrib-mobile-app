@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Frosted glass circle background behind app icon -->
+<!-- Frosted glass rounded-rectangle background behind app icon -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
+    android:shape="rectangle">
     <solid android:color="#28FFFFFF" />
+    <corners android:radius="16dp" />
     <stroke
         android:width="1.5dp"
         android:color="#55FFFFFF" />
