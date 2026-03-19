@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.example.vapecrib.model.InventoryItem;
 import com.example.vapecrib.network.AddProductRequest;
 import com.example.vapecrib.network.AddProductResponse;
+import com.example.vapecrib.network.AlertsResponse;
 import com.example.vapecrib.network.PagedProductsResponse;
 import com.example.vapecrib.network.ProductApiRecord;
 import com.example.vapecrib.network.RetrofitClient;
@@ -18,7 +19,9 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -70,6 +73,35 @@ public class ProductsViewModel extends AndroidViewModel {
 
     private void loadFromApi() {
         try {
+            // ── Fetch active alerts first to build productId → severity map ──────
+            // Uses the existing /alerts endpoint (no server change needed).
+            // Severity priority: CRITICAL > HIGH > MEDIUM — keep the worst level
+            // if a product somehow has more than one active alert.
+            Map<Integer, String> alertMap = new HashMap<>();
+            try {
+                Response<AlertsResponse> alertResp = RetrofitClient
+                        .getInstance(getApplication())
+                        .getApi()
+                        .getAlerts(true, 200)
+                        .execute();
+                if (alertResp.isSuccessful() && alertResp.body() != null
+                        && alertResp.body().data != null) {
+                    Map<String, Integer> rank = new HashMap<>();
+                    rank.put("CRITICAL", 3); rank.put("HIGH", 2); rank.put("MEDIUM", 1);
+                    for (AlertsResponse.AlertItem a : alertResp.body().data) {
+                        String existing = alertMap.get(a.productId);
+                        int newRank = rank.getOrDefault(a.severity != null
+                                ? a.severity.toUpperCase() : "", 0);
+                        int curRank = rank.getOrDefault(existing != null
+                                ? existing : "", 0);
+                        if (newRank > curRank) {
+                            alertMap.put(a.productId, a.severity.toUpperCase());
+                        }
+                    }
+                }
+            } catch (Exception ignored) { /* keep empty map — fall back to adequate */ }
+
+            // ── Fetch paginated product catalogue ─────────────────────────────
             List<InventoryItem> items = new ArrayList<>();
             int page = 1;
             while (true) {
@@ -82,7 +114,7 @@ public class ProductsViewModel extends AndroidViewModel {
                 PagedProductsResponse body = resp.body();
                 if (body == null || body.getData() == null) break;
                 for (ProductApiRecord p : body.getData()) {
-                    items.add(toInventoryItem(p));
+                    items.add(toInventoryItem(p, alertMap));
                 }
                 if (page >= body.getPages() || body.getPages() == 0) break;
                 page++;
@@ -141,19 +173,25 @@ public class ProductsViewModel extends AndroidViewModel {
     /**
      * Maps a server ProductApiRecord to the InventoryItem model used by the adapter.
      *
-     * Stock level thresholds match the web-app convention:
-     *   CRITICAL : stock == 0
-     *   HIGH     : stock 1-5
-     *   MEDIUM   : stock 6-10   (web dashboard "low_stock" threshold is ≤ 10)
-     *   LOW      : stock > 10   (adequate stock)
+     * Uses the alertMap built from GET /api/mobile/alerts (forecast-based severity,
+     * identical to the web dashboard). Products with no active alert are "Low" (adequate).
      */
-    private static InventoryItem toInventoryItem(ProductApiRecord p) {
+    private static InventoryItem toInventoryItem(ProductApiRecord p,
+                                                  Map<Integer, String> alertMap) {
         int stock = p.currentStock;
         InventoryItem.StockLevel level;
-        if (stock == 0)       level = InventoryItem.StockLevel.CRITICAL;
-        else if (stock <= 5)  level = InventoryItem.StockLevel.HIGH;
-        else if (stock <= 10) level = InventoryItem.StockLevel.MEDIUM;
-        else                  level = InventoryItem.StockLevel.LOW;
+        String severity = alertMap.get(p.id);
+        if (severity != null) {
+            switch (severity) {
+                case "CRITICAL": level = InventoryItem.StockLevel.CRITICAL; break;
+                case "HIGH":     level = InventoryItem.StockLevel.HIGH;     break;
+                case "MEDIUM":   level = InventoryItem.StockLevel.MEDIUM;   break;
+                default:         level = InventoryItem.StockLevel.LOW;      break;
+            }
+        } else {
+            // No active alert → stock is sufficient per forecast model
+            level = InventoryItem.StockLevel.LOW;
+        }
 
         return new InventoryItem(
                 p.name,

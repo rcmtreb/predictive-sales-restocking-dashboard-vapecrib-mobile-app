@@ -236,35 +236,30 @@ public class ForecastViewModel extends AndroidViewModel {
         List<Entry> actualEntries   = new ArrayList<>();
         List<Entry> forecastEntries = new ArrayList<>();
 
-        int step     = Math.max(1, merged.size() / 60);
-        int rawIdx   = 0;
         int plotIdx  = 0;
         float totalActual = 0, totalForecast = 0;
 
         for (Map.Entry<LocalDate, float[]> e : merged.entrySet()) {
-            if (rawIdx % step == 0) {
-                LocalDate date   = e.getKey();
-                float actual     = e.getValue()[0];
-                float forecast   = e.getValue()[1];
+            LocalDate date   = e.getKey();
+            float actual     = e.getValue()[0];
+            float forecast   = e.getValue()[1];
 
-                // Mirror web: actual line only for dates with real historical sales.
-                // Future-only forecast dates have no entry here, so the actual line
-                // stops naturally at the last day with real data (no artificial 0 drop).
-                if (actualDates.contains(date)) {
-                    actualEntries.add(new Entry(plotIdx, actual));
-                    totalActual += actual;
-                }
-
-                // Forecast line covers both historical comparison and future predictions.
-                // Only skip if there is genuinely no forecast value for this date.
-                if (forecast > 0) {
-                    forecastEntries.add(new Entry(plotIdx, forecast));
-                    totalForecast += forecast;
-                }
-
-                plotIdx++;
+            // Mirror web: actual line only for dates with real historical sales.
+            // Future-only forecast dates have no entry here, so the actual line
+            // stops naturally at the last day with real data (no artificial 0 drop).
+            if (actualDates.contains(date)) {
+                actualEntries.add(new Entry(plotIdx, actual));
+                totalActual += actual;
             }
-            rawIdx++;
+
+            // Forecast line covers both historical comparison and future predictions.
+            // Only skip if there is genuinely no forecast value for this date.
+            if (forecast > 0) {
+                forecastEntries.add(new Entry(plotIdx, forecast));
+                totalForecast += forecast;
+            }
+
+            plotIdx++;
         }
 
         // Colors match the web app's renderDailyForecastChart:

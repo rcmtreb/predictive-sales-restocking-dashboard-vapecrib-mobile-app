@@ -137,5 +137,15 @@ public interface VapeCribApiService {
     Call<ImportHistoryResponse> getImportHistory(
             @Query("limit") String limit
     );
+
+    /**
+     * Active stock/forecast alerts — returns per-product severity.
+     * Matches: GET /api/mobile/alerts?active_only=true&limit=200
+     */
+    @GET("alerts")
+    Call<AlertsResponse> getAlerts(
+            @Query("active_only") boolean activeOnly,
+            @Query("limit")       int     limit
+    );
 }
 

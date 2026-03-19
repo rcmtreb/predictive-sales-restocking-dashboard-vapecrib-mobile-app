@@ -53,7 +53,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
     private final ExecutorService bgExecutor = Executors.newFixedThreadPool(2);
     private List<SalesData> allSalesData = new ArrayList<>();
-    private int cachedCritical, cachedHigh, cachedMedium, cachedExpiring;
+    private int cachedCritical, cachedHigh, cachedMedium, cachedExpiring, cachedActiveAlerts;
     /** -1f means no API value available yet — fall back to local estimate. */
     private float cachedForecastAccuracy = -1f;
     private float cachedInventoryValue   = -1f;
@@ -250,7 +250,7 @@ public class DashboardViewModel extends AndroidViewModel {
                 : "Loading...";
         totalInventoryValue.postValue(invVal);
         forecastAccuracy.postValue(String.format("%.1f%%", accuracy));
-        activeAlerts.postValue(String.valueOf(cachedCritical > 0 ? cachedCritical : 0));
+        activeAlerts.postValue(String.valueOf(cachedActiveAlerts));
         expiringStocks.postValue(String.valueOf(cachedExpiring));
         criticalCount.postValue("Critical: " + cachedCritical);
         highCount.postValue("Warning: "  + cachedHigh);
@@ -278,6 +278,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
             cachedInventoryValue = d.inventoryValue;
             cachedExpiring       = d.expiringSoon;
+            cachedActiveAlerts   = d.activeAlerts;
 
             if (d.alertsBySeverity != null) {
                 cachedCritical = d.alertsBySeverity.critical;
@@ -333,9 +334,8 @@ public class DashboardViewModel extends AndroidViewModel {
 
         List<Entry> actualEntries   = new ArrayList<>();
         List<Entry> forecastEntries = new ArrayList<>();
-        int step = Math.max(1, data.size() / 60);
         int idx  = 0;
-        for (int i = 0; i < data.size(); i += step) {
+        for (int i = 0; i < data.size(); i++) {
             SalesData d = data.get(i);
             // Only plot actual entry when there are real historical sales. Future-only
             // entries (revenue = 0, forecast > 0) are skipped for the actual line so
