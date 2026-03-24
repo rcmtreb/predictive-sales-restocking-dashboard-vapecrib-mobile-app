@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.vapecrib.databinding.FragmentForecastBinding;
 import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -79,9 +80,20 @@ public class ForecastFragment extends Fragment {
         binding.forecastLineChart.getAxisRight().setEnabled(false);
         binding.forecastLineChart.getAxisLeft().setTextColor(Color.WHITE);
         binding.forecastLineChart.getAxisLeft().setAxisMinimum(0f);
-        binding.forecastLineChart.getXAxis().setTextColor(Color.WHITE);
-        binding.forecastLineChart.getXAxis().setDrawGridLines(false);
-        binding.forecastLineChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
+
+        XAxis xAxis = binding.forecastLineChart.getXAxis();
+        xAxis.setTextColor(Color.WHITE);
+        xAxis.setDrawGridLines(false);
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setLabelRotationAngle(-45f);   // slanted labels like the web
+        xAxis.setTextSize(10f);
+
+        // Extra bottom offset so rotated labels aren't clipped
+        binding.forecastLineChart.setExtraBottomOffset(16f);
+
+        // Visible placeholder while data loads (replaces the default "No chart data available.")
+        binding.forecastLineChart.setNoDataText("Select filters and tap Load Forecast");
+        binding.forecastLineChart.setNoDataTextColor(Color.parseColor("#fbbf24"));
     }
 
     //  Dropdowns 
@@ -227,6 +239,9 @@ public class ForecastFragment extends Fragment {
 
     //  Observers 
 
+    /** Cached X-axis labels from the ViewModel — updated before chart data arrives. */
+    private List<String> currentXLabels = new ArrayList<>();
+
     private void observeViewModel() {
         // Show/hide the SwipeRefreshLayout spinner while a background fetch is running.
         // This gives the user clear feedback that Load Forecast is working.
@@ -237,6 +252,25 @@ public class ForecastFragment extends Fragment {
         forecastViewModel.getForecastSummary().observe(getViewLifecycleOwner(), summary -> {
             if (summary != null && !summary.isEmpty()) {
                 binding.tvForecastHint.setText(summary);
+            }
+        });
+
+        // X-axis day-name labels — arrive just before the chart data
+        forecastViewModel.getXAxisLabels().observe(getViewLifecycleOwner(), labels -> {
+            if (labels != null) {
+                currentXLabels = labels;
+                binding.forecastLineChart.getXAxis().setValueFormatter(new ValueFormatter() {
+                    @Override
+                    public String getFormattedValue(float value) {
+                        int idx = Math.round(value);
+                        if (idx >= 0 && idx < currentXLabels.size()) {
+                            return currentXLabels.get(idx);
+                        }
+                        return "";
+                    }
+                });
+                binding.forecastLineChart.getXAxis().setLabelCount(labels.size(), true);
+                binding.forecastLineChart.getXAxis().setGranularity(1f);
             }
         });
 
@@ -262,6 +296,13 @@ public class ForecastFragment extends Fragment {
                 //   user sees empty axes rather than a stale previous period's data.
                 binding.forecastLineChart.clear();
                 binding.forecastLineChart.invalidate();
+            }
+        });
+
+        // Show API errors as a Toast so the user knows what went wrong
+        forecastViewModel.getApiError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(requireContext(), error, Toast.LENGTH_LONG).show();
             }
         });
 
@@ -309,43 +350,34 @@ public class ForecastFragment extends Fragment {
             return;
         }
 
-        LocalDate start = LocalDate.of(year, month, 1);
-        LocalDate end = null;
-
-        // Narrow to the selected week. Parse "Week N (D1-D2)" produced by populateWeeks().
+        // Parse the week number from "Week N (D1-D2)" — pass the number directly
+        // to the server so it applies the same week-boundary logic as the web.
+        int weekNumber = 1;  // default to week 1
         if (!weekText.isEmpty()) {
-            int parenStart = weekText.indexOf('(');
-            int parenEnd   = weekText.indexOf(')');
-            if (parenStart >= 0 && parenEnd > parenStart) {
-                try {
-                    String[] parts = weekText.substring(parenStart + 1, parenEnd).split("-");
-                    int dayStart = Integer.parseInt(parts[0].trim());
-                    int dayEnd   = Integer.parseInt(parts[1].trim());
-                    start = LocalDate.of(year, month, dayStart);
-                    end   = LocalDate.of(year, month, dayEnd);
-                } catch (Exception ignored) {}
-            }
-        }
-        // Fallback: full month if week was blank or parsing failed
-        if (end == null) {
-            end = start.withDayOfMonth(start.lengthOfMonth());
+            // "Week N (D1-D2)" → extract N
+            try {
+                String trimmed = weekText.trim();  // e.g. "Week 3 (15-21)"
+                int spaceAfterWeek = trimmed.indexOf(' ', 5);  // after "Week "
+                String numPart = trimmed.substring(5, spaceAfterWeek >= 5 ? spaceAfterWeek : trimmed.length());
+                weekNumber = Integer.parseInt(numPart.trim());
+            } catch (Exception ignored) {}
         }
 
-        // Clamp to sample data range Jan-2025..Feb-2026
-        LocalDate dataMin = CSV_MIN_DATE;
-        LocalDate dataMax = CSV_MAX_DATE;
-        if (end.isBefore(dataMin) || start.isAfter(dataMax)) {
+        // Validate against the data range
+        LocalDate weekApproxStart = LocalDate.of(year, month, Math.min((weekNumber - 1) * 7 + 1,
+                LocalDate.of(year, month, 1).lengthOfMonth()));
+        if (weekApproxStart.isAfter(CSV_MAX_DATE)
+                || LocalDate.of(year, month, 1).isBefore(CSV_MIN_DATE.withDayOfMonth(1))) {
             Toast.makeText(requireContext(),
                 "No data for that period. Data covers Jan 2022 to Mar 2026.",
                 Toast.LENGTH_LONG).show();
             return;
         }
-        start = start.isBefore(dataMin) ? dataMin : start;
-        end   = end.isAfter(dataMax)    ? dataMax : end;
 
-        // Update product selection and fetch — no toast needed (spinner provides feedback).
+        // Pass year / month / week number to ViewModel — the server applies the
+        // same boundary logic as the web, so the chart will match exactly.
         forecastViewModel.setSelectedProduct(productText.isEmpty() ? "All Products" : productText);
-        forecastViewModel.filterByDateRange(start, end);
+        forecastViewModel.filterByYearMonthWeek(year, month, weekNumber);
     }
 
     private int getMonthNumber(String name) {

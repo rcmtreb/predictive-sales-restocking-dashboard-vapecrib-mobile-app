@@ -87,6 +87,20 @@ public interface VapeCribApiService {
     );
 
     /**
+     * Pre-processed daily forecast matching the web's /api/forecast/daily.
+     * Returns actual + forecast arrays for a specific week with the same
+     * server-side aggregation, gap-filling, and date boundaries.
+     * Matches: GET /api/mobile/forecast/daily?year=&month=&week=&product_id=
+     */
+    @GET("forecast/daily")
+    Call<DailyForecastResponse> getDailyForecast(
+            @Query("year")       Integer year,
+            @Query("month")      Integer month,
+            @Query("week")       Integer week,
+            @Query("product_id") Integer productId   // nullable
+    );
+
+    /**
      * No-auth lightweight health check used to wake up the Render dyno
      * before the user presses Sign In.
      * Matches: GET /api/mobile/ping
