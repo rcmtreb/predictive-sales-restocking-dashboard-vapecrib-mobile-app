@@ -46,7 +46,7 @@ public class PlexusView extends View {
 
     private void init() {
         density = getContext().getResources().getDisplayMetrics().density;
-        dotPaint.setColor(0xFF00CFFF);          // cyan dots
+        dotPaint.setColor(0x66B0B0B0);          // soft smoke-gray dots (40 % opacity)
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeWidth(1f);
         // Hardware layer keeps animation smooth without straining the CPU
@@ -95,8 +95,8 @@ public class PlexusView extends View {
                 float dy = py[i] - py[j];
                 float d = (float) Math.sqrt(dx * dx + dy * dy);
                 if (d < maxDist) {
-                    int alpha = (int) (150 * (1f - d / maxDist));
-                    linePaint.setARGB(alpha, 0, 207, 255); // cyan
+                    int alpha = (int) (80 * (1f - d / maxDist));
+                    linePaint.setARGB(alpha, 180, 180, 180); // soft smoke-gray
                     canvas.drawLine(px[i], py[i], px[j], py[j], linePaint);
                 }
             }

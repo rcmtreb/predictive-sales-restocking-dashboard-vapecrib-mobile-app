@@ -85,7 +85,7 @@
             android:letterSpacing="0.12"
             android:text="Track. Predict. Dominate."
             android:textAllCaps="false"
-            android:textColor="#99AACCFF"
+            android:textColor="#88AAAAAA"
             android:textSize="12sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -99,7 +99,7 @@
             android:layout_marginStart="28dp"
             android:layout_marginTop="32dp"
             android:layout_marginEnd="28dp"
-            app:cardBackgroundColor="#D01C1C2E"
+            app:cardBackgroundColor="#D0141414"
             app:cardCornerRadius="22dp"
             app:cardElevation="0dp"
             app:strokeColor="#33FFFFFF"
@@ -128,7 +128,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Sign in to your dashboard"
-                    android:textColor="#77AACCFF"
+                    android:textColor="#77AAAAAA"
                     android:textSize="13sp"
                     android:layout_marginBottom="28dp" />
 
@@ -139,11 +139,11 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:hint="Username"
-                    app:boxStrokeColor="#6600CFFF"
+                    app:boxStrokeColor="#66888888"
                     app:boxStrokeWidth="1.5dp"
-                    app:hintTextColor="#99AACCFF"
+                    app:hintTextColor="#99888888"
                     app:startIconDrawable="@drawable/ic_baseline_person_outline_24"
-                    app:startIconTint="#7700CFFF">
+                    app:startIconTint="#77888888">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/email"
@@ -162,12 +162,12 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="28dp"
                     android:hint="Password"
-                    app:boxStrokeColor="#6600CFFF"
+                    app:boxStrokeColor="#66888888"
                     app:boxStrokeWidth="1.5dp"
-                    app:hintTextColor="#99AACCFF"
+                    app:hintTextColor="#99888888"
                     app:passwordToggleEnabled="true"
                     app:startIconDrawable="@drawable/ic_lock_outline"
-                    app:startIconTint="#7700CFFF">
+                    app:startIconTint="#77888888">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/password"
@@ -186,12 +186,12 @@
                     android:layout_height="52dp"
                     android:letterSpacing="0.1"
                     android:text="SIGN IN"
-                    android:textColor="#0A0A14"
+                    android:textColor="#111111"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    app:backgroundTint="#00CFFF"
+                    app:backgroundTint="#D0D0D0"
                     app:cornerRadius="12dp"
-                    app:rippleColor="#3300CFFF" />
+                    app:rippleColor="#44000000" />
 
                 <!-- Progress indicator -->
                 <ProgressBar
@@ -200,7 +200,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:layout_marginTop="16dp"
-                    android:indeterminateTint="#00CFFF"
+                    android:indeterminateTint="#AAAAAA"
                     android:visibility="gone" />
 
                 <!-- Error text -->
@@ -210,7 +210,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:textColor="#FF5252"
+                    android:textColor="#DDDDDD"
                     android:textSize="13sp"
                     android:visibility="gone" />
 
